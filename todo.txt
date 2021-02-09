@@ -1,0 +1,8 @@
+- [ ] Texture the island
+- [ ] Place the models on the island
+- [ ] Create an animated minifigure
+- [ ] Create a skateboard animation
+- [ ] Simulate skateboard physics
+- [ ] Create character models
+- [ ] Place plants
+- [ ] Simulate cars driving

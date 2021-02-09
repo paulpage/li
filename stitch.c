@@ -15,58 +15,66 @@ void set_path(char *dir, char *path) {
     strcat(pathbuf, path);
 }
 
-unsigned char stitch(char *dir, char **images, int nx, int ny, char *outpath) {
+void stitch(char *dir, char **paths, int image_count, int *map, int nx, int ny, char *outfile) {
+
     int iw, ih;
-    set_path(dir, images[0]);
-    stbi_info(pathbuf, &iw, &ih, NULL);
+    unsigned char **images = malloc(sizeof(char*) * image_count);
+    for (int i = 0; i < image_count; i++) {
+        set_path(dir, paths[i]);
+        images[i] = stbi_load(pathbuf, &iw, &ih, NULL, 4);
+    }
     int width = iw * nx;
     int height = ih * ny;
+
     unsigned char *data = malloc(width * height * 4);
-    memset(data, 0, width * height * 4);
 
-    printf("%d x %d\n", width, height);
+    for (int row = 0; row < ny; row++) {
+        for (int col = 0; col < nx; col++) {
+            unsigned char *idata = images[map[row * nx + col]];
 
-    set_path(dir, "text033.png");
-    for (int y = 0; y < ny; y++) {
-        for (int x = 0; x < nx; x++) {
-            /* set_path(dir, images[y * nx + x]); */
-            /* printf("%s\n", images[y * nx + x]); */
-            unsigned char *idata = stbi_load(pathbuf, &iw, &ih, NULL, 4);
+            int xo = col * iw * 4;
+            int yo = row * ih;
 
-            int xo = x * iw * 4;
-            int yo = y * ih;
-
-            printf("%d: %d, %d offset (%d %d)\n", y * nx + x, x, y, xo, yo);
-
-            for (int y1 = 0; y1 < ih; y1++) {
-                for (int x1 = 0; x1 < iw * 4; x1++) {
-                    data[(yo + y1) * (width * 4) + (xo + x1)] =
-                        idata[y1 * (iw * 4) + x1];
+            for (int y = 0; y < ih; y++) {
+                for (int x = 0; x < iw * 4; x++) {
+                    data[(yo + y) * (width * 4) + (xo + x)] =
+                        idata[y * (iw * 4) + x];
                 }
             }
         }
     }
 
-    stbi_write_png(outpath, width, height, 4, data, width * 4);
+    stbi_write_png(outfile, width, height, 4, data, width * 4);
 }
 
 int main() {
-
-    char *images[9] = {
-"text028.png",
-"text029.png",
-"text030.png",
-
-"text031.png",
-"text032.png",
-"text033.png",
-
-"text034.png",
-"text035.png",
-"text036.png",
+    char *images[4] = {
+        "text027.png",
+        "text028.png",
+        "text029.png",
+        "text030.png",
     };
-    char *dir = "/home/paul/projects/lidata/Game/_data/z04IFC/textures/";
-    stitch(dir, images, 3, 3, "out.png");
+    int map[256] = {
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1,
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1,
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    };
+    char *dir = "/home/paul/project/lidata/z04IFC/textures/";
+
+    stitch(dir, images, 4, map, 16, 16, "out.png");
+
     return 0;
 }
-

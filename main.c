@@ -7,6 +7,176 @@
 
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
+Model load_obj(const char *filename) {
+    Model model = {0};
+    unsigned int mesh_count = 0;
+    unsigned int material_count = 0;
+
+    Mesh mesh = {0};
+    memset(&mesh, 0, sizeof(Mesh));
+
+
+    // TODO blender exports quads not just triangles, so we'll have to support that
+
+    // Read the file to a buffer
+    FILE *f;
+    f = fopen(filename, "rb");
+    fseek(f, 0, SEEK_END);
+    size_t file_len = (size_t)ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buffer;
+    buffer = (char *) malloc(file_len + 1);
+    file_len = fread(buffer, 1, file_len, f);
+    buffer[file_len] = 0;
+    fclose(f);
+
+    char *str1, *saveptr1;
+    int vertex_count = 0, tex_coord_count = 0, normal_count = 0, triangle_count = 0;
+    int vertex_i = 0, tex_coord_i = 0, normal_i = 0, triangle_i = 0;
+    Vec3 *vertices, *normals, *tex_coords;
+    Triangle *triangles;
+
+    // Search through the buffer for 'v', 'vt', 'vn', and 'f' strings at the
+    // beginning of lines to see how many of each object there are.
+    bool search = true;
+    for (int i = 0; i < file_len - 3; i++) {
+        if (search) {
+            if (buffer[i] == 'v' && buffer[i + 1] == ' ') {
+                mesh.vertexCount++;
+            } else if (buffer[i] == 'v' && buffer[i + 1] == 't' && buffer[i + 2] == ' ') {
+                tex_coord_count++;
+            } else if (buffer[i] == 'v' && buffer[i + 1] == 'n' && buffer[i + 2] == ' ') {
+                normal_count++;
+            } else if (buffer[i] == 'f' && buffer[i + 1] == ' ') {
+                triangle_count++;
+            }
+            search = false;
+        }
+
+        if (buffer[i] == '\n') {
+            search = true;
+        }
+    }
+    mesh.vertices = (float*)calloc(mesh.vertexCount * 3, sizeof(float));
+    mesh.texcoords = (float*)calloc(mesh.vertexCount * 2, sizeof(float));
+    mesh.normals = (float*)calloc(mesh.vertexCount * 3, sizeof(float));
+    mesh.vboId = (unsigned int *)calloc(DEFAULT_MESH_VERTEX_BUFFERS, sizeof(unsigned int))
+
+    // TODO we don't know how many triangles will be here since we support quads, so just make it times 2 for now
+    triangles = (Triangle*)malloc(sizeof(Triangle) * triangle_count * 2);
+
+    char *line;
+    char number_buf[64];
+    for (str1 = buffer; ; str1 = NULL) {
+        line = strtok_r(str1, "\n", &saveptr1);
+        if (line == NULL) break;
+        
+
+        if (line[0] == 'v') {
+            float numbers[3] = { 0 };
+            int i = 0;
+            for (int n = 0; n < 3; n++) {
+                int j = 0;
+                while ((line[i] < '0' || line[i] > '9') && line[i] != '-') i++;
+                while (j < 128 - 1 && (line[i] == '.' || line[i] == '-' || (line[i] >= '0' && line[i] <= '9'))) {
+                    number_buf[j] = line[i];
+                    i++; j++;
+                }
+                number_buf[j] = 0;
+
+                numbers[n] = atof(number_buf);
+            }
+
+            if (line[0] == 'v' && line[1] == ' ') {
+                mesh.vertices[vertex_i].x = numbers[0];
+                mesh.vertices[vertex_i].y = numbers[1];
+                mesh.vertices[vertex_i].z = numbers[2];
+                vertex_i++;
+            } else if (line[0] == 'v' && line[1] == 't' && line[2] == ' ') {
+                mesh.texcoords[tex_coord_i].x = numbers[0];
+                mesh.texcoords[tex_coord_i].y = numbers[1];
+                mesh.texcoords[tex_coord_i].z = numbers[2];
+                tex_coord_i++;
+            } else if (line[0] == 'v' && line[1] == 'n' && line[2] == ' ') {
+                mesh.normals[normal_i].x = numbers[0];
+                mesh.normals[normal_i].y = numbers[1];
+                mesh.normals[normal_i].z = numbers[2];
+                normal_i++;
+            }
+
+        } else if (line[0] == 'f') {
+
+            // Find the line length
+            int eol = 0;
+            while (line[eol] != '\n' && line[eol] != 0) eol++;
+
+            // Find out how many numbers we have
+            int number_count = 0;
+            bool have_delimiter = false;
+            for (int i = 0; i < eol; i++) {
+                if (line[i] >= '0' && line[i] <= '9') {
+                    if (have_delimiter) {
+                        number_count++;
+                        have_delimiter = false;
+                    }
+                } else {
+                    have_delimiter = true;
+                }
+            }
+
+            // TODO we may want to add quad or more than quad support here.
+            // For now we assume the form 'f p1/t1/n1 p2/t2/n2 p3/t3/n3'
+            int numbers[12];
+
+            int i = 0;
+            for (int n = 0; n < number_count; n++) {
+                int j = 0;
+                while ((line[i] < '0' || line[i] > '9') && line[i] != '-') i++;
+                while (j < 128 - 1 && (line[i] == '.' || line[i] == '-' || (line[i] >= '0' && line[i] <= '9'))) {
+                    number_buf[j] = line[i];
+                    i++; j++;
+                }
+                number_buf[j] = 0;
+                numbers[n] = atoi(number_buf);
+            }
+
+            Triangle t;
+            t.p1 = mesh.vertices[numbers[0] - 1];
+            t.p2 = mesh.vertices[numbers[3] - 1];
+            t.p3 = mesh.vertices[numbers[6] - 1];
+            t.t1 = mesh.texcoords[numbers[1] - 1];
+            t.t2 = mesh.texcoords[numbers[4] - 1];
+            t.t3 = mesh.texcoords[numbers[7] - 1];
+            t.n1 = mesh.normals[numbers[2] - 1];
+            t.n2 = mesh.normals[numbers[5] - 1];
+            t.n3 = mesh.normals[numbers[8] - 1];
+            triangles[triangle_i] = t;
+            triangle_i++;
+            if (number_count == 12) {
+                Triangle t2;
+                t2.p1 = mesh.vertices[numbers[6] - 1];
+                t2.p2 = mesh.vertices[numbers[9] - 1];
+                t2.p3 = mesh.vertices[numbers[0] - 1];
+                t2.t1 = mesh.texcoords[numbers[7] - 1];
+                t2.t2 = mesh.texcoords[numbers[10] - 1];
+                t2.t3 = mesh.texcoords[numbers[1] - 1];
+                t2.n1 = mesh.normals[numbers[8] - 1];
+                t2.n2 = mesh.normals[numbers[11] - 1];
+                t2.n3 = mesh.normals[numbers[2] - 1];
+                triangles[triangle_i] = t2;
+                triangle_i++;
+                triangle_count++;
+            }
+        }
+    }
+
+    *len = triangle_count;
+    return triangles;
+
+
+
+}
+
 int main(void)
 {
     const int screenWidth = 800;
@@ -24,8 +194,8 @@ int main(void)
     Ray ray = {0};
 
 
-    /* Model model = LoadModel("/home/paul/projects/lidata/z02LGI/meshes/land.obj"); */
-    Model model = LoadModel("test.obj");
+    Model model = LoadModel("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
+    /* Model model = LoadModel("texcoords.obj"); */
     for (int i = 0; i < model.meshes[0].vertexCount; i++) {
         float u = model.meshes[0].texcoords[i*2];
         float v = model.meshes[0].texcoords[i*2+1];
@@ -165,43 +335,31 @@ int main(void)
 
         if (IsKeyPressed(KEY_E)) {
 
+            for (int i = 0; i < 30; i++) {
+
             // ========================================
             bool success = false;
-            Mesh mesh = model.meshes[0];
-            FILE *objFile = fopen("test.obj", "wt");
+            /* Mesh mesh = model.meshes[0]; */
+            FILE *objFile = fopen("texcoords.obj", "wt");
 
-            fprintf(objFile, "# //////////////////////////////////////////////////////////////////////////////////\n");
-            fprintf(objFile, "# //                                                                              //\n");
-            fprintf(objFile, "# // rMeshOBJ exporter v1.0 - Mesh exported as triangle faces and not optimized   //\n");
-            fprintf(objFile, "# //                                                                              //\n");
-            fprintf(objFile, "# // more info and bugs-report:  github.com/raysan5/raylib                        //\n");
-            fprintf(objFile, "# // feedback and support:       ray[at]raylib.com                                //\n");
-            fprintf(objFile, "# //                                                                              //\n");
-            fprintf(objFile, "# // Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
-            fprintf(objFile, "# //                                                                              //\n");
-            fprintf(objFile, "# //////////////////////////////////////////////////////////////////////////////////\n\n");
-            fprintf(objFile, "# Vertex Count:     %i\n", mesh.vertexCount);
-            fprintf(objFile, "# Triangle Count:   %i\n\n", mesh.triangleCount);
+            fprintf(objFile, "# Vertex Count:     %i\n", model.meshes[0].vertexCount);
+            fprintf(objFile, "# Triangle Count:   %i\n\n", model.meshes[0].triangleCount);
 
             fprintf(objFile, "g mesh\n");
 
-            for (int i = 0, v = 0; i < mesh.vertexCount; i++, v += 3)
-            {
-                fprintf(objFile, "v %.2f %.2f %.2f\n", mesh.vertices[v], mesh.vertices[v + 1], mesh.vertices[v + 2]);
+            for (int i = 0, v = 0; i < model.meshes[0].vertexCount; i++, v += 3) {
+                fprintf(objFile, "v %.3f %.3f %.3f\n", model.meshes[0].vertices[v], model.meshes[0].vertices[v + 1], model.meshes[0].vertices[v + 2]);
             }
 
-            for (int i = 0, v = 0; i < mesh.vertexCount; i++, v += 2)
-            {
-                fprintf(objFile, "vt %.2f %.2f\n", mesh.texcoords[v], mesh.texcoords[v + 1]);
+            for (int i = 0, v = 0; i < model.meshes[0].vertexCount; i++, v += 2) {
+                fprintf(objFile, "vt %.3f %.3f\n", model.meshes[0].texcoords[v], model.meshes[0].texcoords[v + 1]);
             }
 
-            for (int i = 0, v = 0; i < mesh.vertexCount; i++, v += 3)
-            {
-                fprintf(objFile, "vn %.2f %.2f %.2f\n", mesh.normals[v], mesh.normals[v + 1], mesh.normals[v + 2]);
+            for (int i = 0, v = 0; i < model.meshes[0].vertexCount; i++, v += 3) {
+                fprintf(objFile, "vn %.3f %.3f %.3f\n", model.meshes[0].normals[v], model.meshes[0].normals[v + 1], model.meshes[0].normals[v + 2]);
             }
 
-            for (int i = 0; i < mesh.triangleCount; i += 3)
-            {
+            for (int i = 0; i < model.meshes[0].triangleCount * 3; i += 3) {
                 fprintf(objFile, "f %i/%i/%i %i/%i/%i %i/%i/%i\n", i, i, i, i + 1, i + 1, i + 1, i + 2, i + 2, i + 2);
             }
 
@@ -212,7 +370,18 @@ int main(void)
             success = true;
             // ========================================
             printf("Exported.\n");
+
+            model = LoadModel("texcoords.obj");
+            model.materials[0].maps[MAP_DIFFUSE].texture = texture;
+
+
+            }
         }
+
+        if (IsKeyPressed(KEY_R)) {
+            model = LoadModel("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
+        }
+        model.materials[0].maps[MAP_DIFFUSE].texture = texture;
 
         BeginDrawing();
 

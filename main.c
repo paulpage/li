@@ -4,19 +4,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
 Model load_obj(const char *filename) {
     Model model = {0};
-    unsigned int mesh_count = 0;
-    unsigned int material_count = 0;
-
-    Mesh mesh = {0};
-    memset(&mesh, 0, sizeof(Mesh));
-
-
-    // TODO blender exports quads not just triangles, so we'll have to support that
+    model.meshCount = 1;
+    model.materialCount = 1;
+    model.meshes = (Mesh*)calloc(model.meshCount, sizeof(Mesh));
+    model.materials = (Material *)calloc(model.materialCount, sizeof(Material));
+    model.materials[0] = LoadMaterialDefault();
 
     // Read the file to a buffer
     FILE *f;
@@ -33,8 +31,8 @@ Model load_obj(const char *filename) {
     char *str1, *saveptr1;
     int vertex_count = 0, tex_coord_count = 0, normal_count = 0, triangle_count = 0;
     int vertex_i = 0, tex_coord_i = 0, normal_i = 0, triangle_i = 0;
-    Vec3 *vertices, *normals, *tex_coords;
-    Triangle *triangles;
+    /* Vec3 *vertices, *normals, *tex_coords; */
+    /* Triangle *triangles; */
 
     // Search through the buffer for 'v', 'vt', 'vn', and 'f' strings at the
     // beginning of lines to see how many of each object there are.
@@ -42,13 +40,14 @@ Model load_obj(const char *filename) {
     for (int i = 0; i < file_len - 3; i++) {
         if (search) {
             if (buffer[i] == 'v' && buffer[i + 1] == ' ') {
-                mesh.vertexCount++;
+                model.meshes[0].vertexCount++;
             } else if (buffer[i] == 'v' && buffer[i + 1] == 't' && buffer[i + 2] == ' ') {
-                tex_coord_count++;
+                /* model.meshes[0].texcoords++; */
             } else if (buffer[i] == 'v' && buffer[i + 1] == 'n' && buffer[i + 2] == ' ') {
-                normal_count++;
+                /* normal_count++; */
             } else if (buffer[i] == 'f' && buffer[i + 1] == ' ') {
-                triangle_count++;
+                model.meshes[0].triangleCount++;
+                /* triangle_count++; */
             }
             search = false;
         }
@@ -57,13 +56,14 @@ Model load_obj(const char *filename) {
             search = true;
         }
     }
-    mesh.vertices = (float*)calloc(mesh.vertexCount * 3, sizeof(float));
-    mesh.texcoords = (float*)calloc(mesh.vertexCount * 2, sizeof(float));
-    mesh.normals = (float*)calloc(mesh.vertexCount * 3, sizeof(float));
-    mesh.vboId = (unsigned int *)calloc(DEFAULT_MESH_VERTEX_BUFFERS, sizeof(unsigned int))
+    model.meshes[0].vertices = (float*)calloc(model.meshes[0].vertexCount * 3, sizeof(float));
+    model.meshes[0].texcoords = (float*)calloc(model.meshes[0].vertexCount * 2, sizeof(float));
+    model.meshes[0].normals = (float*)calloc(model.meshes[0].vertexCount * 3, sizeof(float));
+    model.meshes[0].vboId = (unsigned int *)calloc(/*DEFAULT_MESH_VERTEX_BUFFERS*/ 7, sizeof(unsigned int));
+    model.meshes[0].indices = (unsigned short*)calloc(model.meshes[0].triangleCount * 3 * 2, sizeof(unsigned short));
 
     // TODO we don't know how many triangles will be here since we support quads, so just make it times 2 for now
-    triangles = (Triangle*)malloc(sizeof(Triangle) * triangle_count * 2);
+    /* triangles = (Triangle*)malloc(sizeof(Triangle) * triangle_count * 2); */
 
     char *line;
     char number_buf[64];
@@ -88,19 +88,19 @@ Model load_obj(const char *filename) {
             }
 
             if (line[0] == 'v' && line[1] == ' ') {
-                mesh.vertices[vertex_i].x = numbers[0];
-                mesh.vertices[vertex_i].y = numbers[1];
-                mesh.vertices[vertex_i].z = numbers[2];
+                model.meshes[0].vertices[vertex_i] = numbers[0]; vertex_i++;
+                model.meshes[0].vertices[vertex_i] = numbers[1]; vertex_i++;
+                model.meshes[0].vertices[vertex_i] = numbers[2]; vertex_i++;
                 vertex_i++;
             } else if (line[0] == 'v' && line[1] == 't' && line[2] == ' ') {
-                mesh.texcoords[tex_coord_i].x = numbers[0];
-                mesh.texcoords[tex_coord_i].y = numbers[1];
-                mesh.texcoords[tex_coord_i].z = numbers[2];
+                model.meshes[0].texcoords[tex_coord_i] = numbers[0]; tex_coord_i++;
+                model.meshes[0].texcoords[tex_coord_i] = numbers[1]; tex_coord_i++;
+                model.meshes[0].texcoords[tex_coord_i] = numbers[2]; tex_coord_i++;
                 tex_coord_i++;
             } else if (line[0] == 'v' && line[1] == 'n' && line[2] == ' ') {
-                mesh.normals[normal_i].x = numbers[0];
-                mesh.normals[normal_i].y = numbers[1];
-                mesh.normals[normal_i].z = numbers[2];
+                model.meshes[0].normals[normal_i] = numbers[0]; normal_i++;
+                model.meshes[0].normals[normal_i] = numbers[1]; normal_i++;
+                model.meshes[0].normals[normal_i] = numbers[2]; normal_i++;
                 normal_i++;
             }
 
@@ -140,41 +140,45 @@ Model load_obj(const char *filename) {
                 numbers[n] = atoi(number_buf);
             }
 
-            Triangle t;
-            t.p1 = mesh.vertices[numbers[0] - 1];
-            t.p2 = mesh.vertices[numbers[3] - 1];
-            t.p3 = mesh.vertices[numbers[6] - 1];
-            t.t1 = mesh.texcoords[numbers[1] - 1];
-            t.t2 = mesh.texcoords[numbers[4] - 1];
-            t.t3 = mesh.texcoords[numbers[7] - 1];
-            t.n1 = mesh.normals[numbers[2] - 1];
-            t.n2 = mesh.normals[numbers[5] - 1];
-            t.n3 = mesh.normals[numbers[8] - 1];
-            triangles[triangle_i] = t;
+            model.meshes[0].indices[triangle_i] = numbers[0] - 1; triangle_i++;
+            model.meshes[0].indices[triangle_i] = numbers[3] - 1; triangle_i++;
+            model.meshes[0].indices[triangle_i] = numbers[6] - 1; triangle_i++;
+            /* Triangle t; */
+            /* t.p1 = mesh.vertices[numbers[0] - 1]; */
+            /* t.p2 = mesh.vertices[numbers[3] - 1]; */
+            /* t.p3 = mesh.vertices[numbers[6] - 1]; */
+            /* t.t1 = mesh.texcoords[numbers[1] - 1]; */
+            /* t.t2 = mesh.texcoords[numbers[4] - 1]; */
+            /* t.t3 = mesh.texcoords[numbers[7] - 1]; */
+            /* t.n1 = mesh.normals[numbers[2] - 1]; */
+            /* t.n2 = mesh.normals[numbers[5] - 1]; */
+            /* t.n3 = mesh.normals[numbers[8] - 1]; */
+            /* triangles[triangle_i] = t; */
             triangle_i++;
             if (number_count == 12) {
-                Triangle t2;
-                t2.p1 = mesh.vertices[numbers[6] - 1];
-                t2.p2 = mesh.vertices[numbers[9] - 1];
-                t2.p3 = mesh.vertices[numbers[0] - 1];
-                t2.t1 = mesh.texcoords[numbers[7] - 1];
-                t2.t2 = mesh.texcoords[numbers[10] - 1];
-                t2.t3 = mesh.texcoords[numbers[1] - 1];
-                t2.n1 = mesh.normals[numbers[8] - 1];
-                t2.n2 = mesh.normals[numbers[11] - 1];
-                t2.n3 = mesh.normals[numbers[2] - 1];
-                triangles[triangle_i] = t2;
+                model.meshes[0].indices[triangle_i] = numbers[0] - 1; triangle_i++;
+                model.meshes[0].indices[triangle_i] = numbers[3] - 1; triangle_i++;
+                model.meshes[0].indices[triangle_i] = numbers[6] - 1; triangle_i++;
+                /* Triangle t2; */
+                /* t2.p1 = mesh.vertices[numbers[6] - 1]; */
+                /* t2.p2 = mesh.vertices[numbers[9] - 1]; */
+                /* t2.p3 = mesh.vertices[numbers[0] - 1]; */
+                /* t2.t1 = mesh.texcoords[numbers[7] - 1]; */
+                /* t2.t2 = mesh.texcoords[numbers[10] - 1]; */
+                /* t2.t3 = mesh.texcoords[numbers[1] - 1]; */
+                /* t2.n1 = mesh.normals[numbers[8] - 1]; */
+                /* t2.n2 = mesh.normals[numbers[11] - 1]; */
+                /* t2.n3 = mesh.normals[numbers[2] - 1]; */
+                /* triangles[triangle_i] = t2; */
                 triangle_i++;
-                triangle_count++;
+                model.meshes[0].triangleCount++;
             }
         }
     }
 
-    *len = triangle_count;
-    return triangles;
-
-
-
+    /* *len = triangle_count; */
+    /* return triangles; */
+    return model;
 }
 
 int main(void)
@@ -194,7 +198,7 @@ int main(void)
     Ray ray = {0};
 
 
-    Model model = LoadModel("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
+    Model model = load_obj("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
     /* Model model = LoadModel("texcoords.obj"); */
     for (int i = 0; i < model.meshes[0].vertexCount; i++) {
         float u = model.meshes[0].texcoords[i*2];

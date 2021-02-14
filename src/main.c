@@ -15,6 +15,8 @@ Model load_obj(const char *filename) {
     model.meshes = (Mesh*)calloc(model.meshCount, sizeof(Mesh));
     model.meshMaterial = (int*)calloc(model.meshCount, sizeof(int));
 
+    Mesh *m = &(model.meshes[0]);
+
     // Read the file to a buffer
     FILE *f;
     f = fopen(filename, "rb");
@@ -29,18 +31,13 @@ Model load_obj(const char *filename) {
 
     int vertex_i = 0, tex_coord_i = 0, normal_i = 0, triangle_i = 0;
 
-    // Search through the buffer for 'v', 'vt', 'vn', and 'f' strings at the
-    // beginning of lines to see how many of each object there are.
+    // Search through the buffer for 'f' strings at the beginning of lines to
+    // see how many faces there are
     bool search = true;
     for (int i = 0; i < file_len - 3; i++) {
         if (search) {
-            /* if (buffer[i] == 'v' && buffer[i + 1] == ' ') { */
-            /*     model.meshes[0].vertexCount++; */
-            /* } else if (buffer[i] == 'v' && buffer[i + 1] == 't' && buffer[i + 2] == ' ') { */
-            /* } else if (buffer[i] == 'v' && buffer[i + 1] == 'n' && buffer[i + 2] == ' ') { */
-            /* } else if (buffer[i] == 'f' && buffer[i + 1] == ' ') { */
-            if (buffer[i] == 'f' && buffer[i + 1] == ' ') {
-                model.meshes[0].triangleCount++;
+            if (search && buffer[i] == 'f' && buffer[i + 1] == ' ') {
+                m->triangleCount++;
             }
             search = false;
         }
@@ -49,18 +46,17 @@ Model load_obj(const char *filename) {
             search = true;
         }
     }
-    model.meshes[0].vertexCount = model.meshes[0].triangleCount * 3;
+    m->vertexCount = m->triangleCount * 3;
 
     int vertex_count = 0, texcoord_count = 0, normal_count = 0;
-    float *vertices = (float*)calloc(model.meshes[0].triangleCount * 3 * 3, sizeof(float));
-    float *texcoords = (float*)calloc(model.meshes[0].triangleCount * 3 * 2, sizeof(float));
-    float *normals = (float*)calloc(model.meshes[0].triangleCount * 3 * 3, sizeof(float));
+    float *vertices = (float*)calloc(m->triangleCount * 3 * 3, sizeof(float));
+    float *texcoords = (float*)calloc(m->triangleCount * 3 * 2, sizeof(float));
+    float *normals = (float*)calloc(m->triangleCount * 3 * 3, sizeof(float));
 
-    model.meshes[0].vertices = (float*)calloc(model.meshes[0].vertexCount * 3, sizeof(float));
-    model.meshes[0].texcoords = (float*)calloc(model.meshes[0].vertexCount * 2, sizeof(float));
-    model.meshes[0].normals = (float*)calloc(model.meshes[0].vertexCount * 3, sizeof(float));
-    model.meshes[0].vboId = (unsigned int *)calloc(/*DEFAULT_MESH_VERTEX_BUFFERS*/ 7, sizeof(unsigned int));
-    /* model.meshes[0].indices = (unsigned short*)calloc(model.meshes[0].triangleCount * 3 * 2, sizeof(unsigned short)); */
+    m->vertices = (float*)calloc(m->vertexCount * 3, sizeof(float));
+    m->texcoords = (float*)calloc(m->vertexCount * 2, sizeof(float));
+    m->normals = (float*)calloc(m->vertexCount * 3, sizeof(float));
+    m->vboId = (unsigned int *)calloc( 7, sizeof(unsigned int));
 
     int dbg_i = 0; // TODO remove
 
@@ -101,7 +97,8 @@ Model load_obj(const char *filename) {
             for (int n = 0; n < 3; n++) {
                 int j = 0;
                 while ((line[i] < '0' || line[i] > '9') && line[i] != '-') i++;
-                while (j < 128 - 1 && (line[i] == '.' || line[i] == '-' || (line[i] >= '0' && line[i] <= '9'))) {
+                while (j < 128 - 1 && (line[i] == '.' || line[i] == '-'
+                            || (line[i] >= '0' && line[i] <= '9'))) {
                     number_buf[j] = line[i];
                     i++; j++;
                 }
@@ -154,7 +151,8 @@ Model load_obj(const char *filename) {
             for (int n = 0; n < number_count; n++) {
                 int j = 0;
                 while ((line[i] < '0' || line[i] > '9') && line[i] != '-') i++;
-                while (j < 128 - 1 && (line[i] == '.' || line[i] == '-' || (line[i] >= '0' && line[i] <= '9'))) {
+                while (j < 128 - 1 && (line[i] == '.' || line[i] == '-'
+                            || (line[i] >= '0' && line[i] <= '9'))) {
                     number_buf[j] = line[i];
                     i++; j++;
                 }
@@ -167,56 +165,16 @@ Model load_obj(const char *filename) {
             }
 
             for (int n = 0; n < 3; n++) {
-                model.meshes[0].vertices[triangle_i * 3 + 0] = vertices[(numbers[n * 3] - 1) * 3 + 0];
-                model.meshes[0].vertices[triangle_i * 3 + 1] = vertices[(numbers[n * 3] - 1) * 3 + 1];
-                model.meshes[0].vertices[triangle_i * 3 + 2] = vertices[(numbers[n * 3] - 1) * 3 + 2];
-                model.meshes[0].texcoords[triangle_i * 2 + 0] = texcoords[(numbers[n * 3] - 1) * 2 + 0];
-                model.meshes[0].texcoords[triangle_i * 2 + 1] = texcoords[(numbers[n * 3] - 1) * 2 + 1];
-                model.meshes[0].normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 0];
-                model.meshes[0].normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 1];
-                model.meshes[0].normals[triangle_i * 3 + 3] = normals[(numbers[n * 3] - 1) * 3 + 2];
+                m->vertices[triangle_i * 3 + 0] = vertices[(numbers[n * 3] - 1) * 3 + 0];
+                m->vertices[triangle_i * 3 + 1] = vertices[(numbers[n * 3] - 1) * 3 + 1];
+                m->vertices[triangle_i * 3 + 2] = vertices[(numbers[n * 3] - 1) * 3 + 2];
+                m->texcoords[triangle_i * 2 + 0] = texcoords[(numbers[n * 3] - 1) * 2 + 0];
+                m->texcoords[triangle_i * 2 + 1] = texcoords[(numbers[n * 3] - 1) * 2 + 1];
+                m->normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 0];
+                m->normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 1];
+                m->normals[triangle_i * 3 + 3] = normals[(numbers[n * 3] - 1) * 3 + 2];
                 triangle_i++;
             }
-
-            /* model.meshes[0].vertices[triangle_i * 9 + 0] = vertices[(numbers[0] - 1) * 3 + 0]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 1] = vertices[(numbers[0] - 1) * 3 + 1]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 2] = vertices[(numbers[0] - 1) * 3 + 2]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 3] = vertices[(numbers[3] - 1) * 3 + 0]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 4] = vertices[(numbers[3] - 1) * 3 + 1]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 5] = vertices[(numbers[3] - 1) * 3 + 2]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 6] = vertices[(numbers[6] - 1) * 3 + 0]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 7] = vertices[(numbers[6] - 1) * 3 + 1]; triangle_i++; */
-            /* model.meshes[0].vertices[triangle_i * 9 + 8] = vertices[(numbers[6] - 1) * 3 + 2]; triangle_i++; */
-
-            /* model.meshes[0].texcoords[triangle_i * 6 + 0] = texcoords[(numbers[0] - 1) * 2 + 0]; triangle_i++; */
-            /* model.meshes[0].texcoords[triangle_i * 6 + 1] = texcoords[(numbers[0] - 1) * 2 + 1]; triangle_i++; */
-            /* model.meshes[0].texcoords[triangle_i * 6 + 2] = texcoords[(numbers[3] - 1) * 2 + 0]; triangle_i++; */
-            /* model.meshes[0].texcoords[triangle_i * 6 + 3] = texcoords[(numbers[3] - 1) * 2 + 1]; triangle_i++; */
-            /* model.meshes[0].texcoords[triangle_i * 6 + 4] = texcoords[(numbers[6] - 1) * 2 + 0]; triangle_i++; */
-            /* model.meshes[0].texcoords[triangle_i * 6 + 5] = texcoords[(numbers[6] - 1) * 2 + 1]; triangle_i++; */
-
-            /* model.meshes[0].normals[triangle_i * 9 + 1] = normals[(numbers[0] - 1) * 3 + 1]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 2] = normals[(numbers[0] - 1) * 3 + 2]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 3] = normals[(numbers[3] - 1) * 3 + 0]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 4] = normals[(numbers[3] - 1) * 3 + 1]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 5] = normals[(numbers[3] - 1) * 3 + 2]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 6] = normals[(numbers[6] - 1) * 3 + 0]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 7] = normals[(numbers[6] - 1) * 3 + 1]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 8] = normals[(numbers[6] - 1) * 3 + 2]; triangle_i++; */
-            /* model.meshes[0].normals[triangle_i * 9 + 8] = normals[(numbers[6] - 1) * 3 + 2]; triangle_i++; */
-
-            /* triangle_i++; */
-
-            /* model.meshes[0].indices[triangle_i] = numbers[0] - 1; triangle_i++; */
-            /* model.meshes[0].indices[triangle_i] = numbers[3] - 1; triangle_i++; */
-            /* model.meshes[0].indices[triangle_i] = numbers[6] - 1; triangle_i++; */
-
-            /* if (number_count == 12) { */
-                /* model.meshes[0].indices[triangle_i] = numbers[6] - 1; triangle_i++; */
-                /* model.meshes[0].indices[triangle_i] = numbers[9] - 1; triangle_i++; */
-                /* model.meshes[0].indices[triangle_i] = numbers[0] - 1; triangle_i++; */
-                /* model.meshes[0].triangleCount++; */
-            /* } */
         }
     }
 
@@ -266,11 +224,12 @@ int main(void)
     }
 
     Model model = load_obj("texcoords.obj");
-    float *saved_texcoords = malloc(sizeof(float) * model.meshes[0].triangleCount * 3 * 2);
-    for (int i = 0; i < model.meshes[0].triangleCount * 6; i++) {
-        saved_texcoords[i] = model.meshes[0].texcoords[i];
+    Mesh *m = &(model.meshes[0]);
+    float *saved_texcoords = malloc(sizeof(float) * m->triangleCount * 3 * 2);
+    for (int i = 0; i < m->triangleCount * 6; i++) {
+        saved_texcoords[i] = m->texcoords[i];
     }
-    rlUpdateMesh(model.meshes[0], 1, model.meshes[0].vertexCount);
+    rlUpdateMesh(model.meshes[0], 1, m->vertexCount);
 
     /* Texture2D texture = LoadTexture("/home/paul/project/lidata/z04IFC/textures/text028.png"); */
     Texture2D texture = LoadTexture("out.png");
@@ -290,8 +249,6 @@ int main(void)
     Vector3 bary = { 0.0f, 0.0f, 0.0f };
 
     SetCameraMode(camera, CAMERA_FREE);
-
-    Mesh *m = &(model.meshes[0]);
 
     SetTargetFPS(60);
     while (!WindowShouldClose()) {
@@ -315,9 +272,6 @@ int main(void)
             cursorColor = GREEN;
             hitObjectName = "Ground";
         }
-
-        // Check ray collision against test triangle
-        /* RayHitInfo triHitInfo = GetCollisionRayTriangle(ray, ta, tb, tc); */
 
         hitTriangle = false;
         int i;
@@ -348,41 +302,11 @@ int main(void)
             }
         }
         if (hitTriangle && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-            m->texcoords[i * 6 + 0] = original_texcoords[i * 6 + 0] + 0.5f;
-            m->texcoords[i * 6 + 1] = original_texcoords[i * 6 + 1] + 0.5f;
-            m->texcoords[i * 6 + 2] = original_texcoords[i * 6 + 2] + 0.5f;
-            m->texcoords[i * 6 + 3] = original_texcoords[i * 6 + 3] + 0.5f;
-            m->texcoords[i * 6 + 4] = original_texcoords[i * 6 + 4] + 0.5f;
-            m->texcoords[i * 6 + 5] = original_texcoords[i * 6 + 5] + 0.5f;
+            for (int j = 0; j < 6; j++) {
+                m->texcoords[i * 6 + j] = original_texcoords[i * 6 + j] + 0.5f;
+            }
             rlUpdateMesh(*m, 1, m->triangleCount * 3);
         }
-        /* if ((triHitInfo.hit) && (triHitInfo.distance < nearestHit.distance)) { */
-        /*     nearestHit = triHitInfo; */
-        /*     cursorColor = PURPLE; */
-        /*     hitObjectName = "Triangle"; */
-
-        /*     bary = Vector3Barycenter(nearestHit.position, ta, tb, tc); */
-        /*     hitTriangle = true; */
-        /* } */
-        /* else hitTriangle = false; */
-
-        /* RayHitInfo meshHitInfo = {0}; */
-
-        /* // Check ray collision against bounding box first, before trying the full ray-mesh test */
-        /* if (CheckCollisionRayBox(ray, modelBBox)) { */
-        /*     hitMeshBBox = true; */
-
-        /*     // Check ray collision against model */
-        /*     // NOTE: It considers model.transform matrix! */
-        /*     meshHitInfo = GetCollisionRayModel(ray, model); */
-
-        /*     if ((meshHitInfo.hit) && (meshHitInfo.distance < nearestHit.distance)) */
-        /*     { */
-        /*         nearestHit = meshHitInfo; */
-        /*         cursorColor = ORANGE; */
-        /*         hitObjectName = "Mesh"; */
-        /*     } */
-        /* } */
 
         hitMeshBBox = false;
 
@@ -421,18 +345,13 @@ int main(void)
                 printf("Exported.\n");
 
                 model = load_obj("texcoords.obj");
-                for (int i = 0; i < model.meshes[0].triangleCount * 6; i++) {
+                for (int i = 0; i < m->triangleCount * 6; i++) {
                     saved_texcoords[i] = m->texcoords[i];
                 }
                 m = &(model.meshes[0]);
                 model.materials[0].maps[MAP_DIFFUSE].texture = texture;
             }
         }
-
-        if (IsKeyPressed(KEY_R)) {
-            model = load_obj("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
-        }
-        model.materials[0].maps[MAP_DIFFUSE].texture = texture;
 
         BeginDrawing();
 
@@ -458,53 +377,6 @@ int main(void)
                     DrawCube(nearestHit.position, 0.3, 0.3, 0.3, cursorColor);
                     DrawCubeWires(nearestHit.position, 0.3, 0.3, 0.3, RED);
 
-                    float shortest1 = FLT_MAX;
-                    float shortest2 = FLT_MAX;
-                    float shortest3 = FLT_MAX;
-                    float shortest4 = FLT_MAX;
-                    Vector3 s1 = {0};
-                    Vector3 s2 = {0};
-                    Vector3 s3 = {0};
-                    Vector3 s4 = {0};
-                    for (int i = 0; i < m->triangleCount * 3; i += 3) {
-                        Vector3 point = (Vector3){
-                            m->vertices[i * 3 + 0],
-                            m->vertices[i * 3 + 1],
-                            m->vertices[i * 3 + 2],
-                        };
-                        float distance = Vector3Distance(point, nearestHit.position);
-                        if (distance < shortest1) {
-                            shortest4 = shortest3;
-                            shortest3 = shortest2;
-                            shortest2 = shortest1;
-                            shortest1 = distance;
-                            s4 = s3;
-                            s3 = s2;
-                            s2 = s1;
-                            s1 = point;
-                        } else if (distance < shortest2) {
-                            shortest4 = shortest3;
-                            shortest3 = shortest2;
-                            shortest2 = distance;
-                            s4 = s3;
-                            s3 = s2;
-                            s2 = point;
-                        } else if (distance < shortest3) {
-                            shortest4 = shortest3;
-                            shortest3 = distance;
-                            s4 = s3;
-                            s3 = point;
-                        } else if (distance < shortest4) {
-                            shortest4 = distance;
-                            s4 = point;
-                        }
-                    }
-
-                    DrawSphere(s1, 2, RED);
-                    DrawSphere(s2, 2, RED);
-                    DrawSphere(s3, 2, RED);
-                    DrawSphere(s4, 2, RED);
-
                     Vector3 normalEnd;
                     normalEnd.x = nearestHit.position.x + nearestHit.normal.x;
                     normalEnd.y = nearestHit.position.y + nearestHit.normal.y;
@@ -519,29 +391,7 @@ int main(void)
 
             EndMode3D();
 
-            // Draw some debug GUI text
-            DrawText(TextFormat("Hit Object: %s", hitObjectName), 10, 50, 10, BLACK);
-
-            if (nearestHit.hit) {
-                int ypos = 70;
-
-                DrawText(TextFormat("Distance: %3.2f", nearestHit.distance), 10, ypos, 10, BLACK);
-
-                DrawText(TextFormat("Hit Pos: %3.2f %3.2f %3.2f",
-                                    nearestHit.position.x,
-                                    nearestHit.position.y,
-                                    nearestHit.position.z), 10, ypos + 15, 10, BLACK);
-
-                DrawText(TextFormat("Hit Norm: %3.2f %3.2f %3.2f",
-                                    nearestHit.normal.x,
-                                    nearestHit.normal.y,
-                                    nearestHit.normal.z), 10, ypos + 30, 10, BLACK);
-
-                if (hitTriangle) DrawText(TextFormat("Barycenter: %3.2f %3.2f %3.2f",  bary.x, bary.y, bary.z), 10, ypos + 45, 10, BLACK);
-            }
-
             DrawText("Use Mouse to Move Camera", 10, 430, 10, GRAY);
-
             DrawFPS(10, 10);
 
         EndDrawing();

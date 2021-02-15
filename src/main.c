@@ -188,13 +188,44 @@ Model load_obj(const char *filename) {
     return model;
 }
 
+void write_obj(Model model, const char *filename) {
+    Mesh *m = &(model.meshes[0]);
+    FILE *objFile = fopen("texcoords.obj", "wt");
+
+    fprintf(objFile, "# Vertex Count:     %i\n", m->vertexCount);
+    fprintf(objFile, "# Triangle Count:   %i\n\n", m->triangleCount);
+    fprintf(objFile, "g mesh\n");
+
+    for (int i = 0, v = 0; i < m->vertexCount; i++, v += 3) {
+        fprintf(objFile, "v %.3f %.3f %.3f\n", m->vertices[v], m->vertices[v + 1], m->vertices[v + 2]);
+    }
+
+    for (int i = 0, v = 0; i < m->vertexCount; i++, v += 2) {
+        fprintf(objFile, "vt %.3f %.3f\n", m->texcoords[v], m->texcoords[v + 1]);
+    }
+
+    for (int i = 0, v = 0; i < m->vertexCount; i++, v += 3) {
+        fprintf(objFile, "vn %.3f %.3f %.3f\n", m->normals[v], m->normals[v + 1], m->normals[v + 2]);
+    }
+
+    for (int i = 0; i < m->triangleCount * 3; i += 3) {
+        fprintf(objFile, "f %i/%i/%i %i/%i/%i %i/%i/%i\n",
+                i + 1, i + 1, i + 1, i + 2, i + 2, i + 2, i + 3, i + 3, i + 3
+               );
+    }
+
+    fprintf(objFile, "\n");
+
+    fclose(objFile);
+}
+
 int main(void)
 {
     const int screenWidth = 800;
     const int screenHeight = 450;
     InitWindow(screenWidth, screenHeight, "Island");
 
-    // Define the camera to look into our 3d world
+    // Set up the camera
     Camera camera = { 0 };
     camera.position = (Vector3){ 20.0f, 20.0f, 20.0f };
     camera.target = (Vector3){ 0.0f, 8.0f, 0.0f };
@@ -203,10 +234,16 @@ int main(void)
     camera.type = CAMERA_PERSPECTIVE;
 
     Ray ray = {0};
+    bool mouse_intercepted = false;
 
+    // Set up the texture picker
+    int tp_rows = 2;
+    int tp_cols = 2;
+    Rectangle tp_rect = {5, 5, 100, 100};
+    Rectangle tp_selection = {0.0f, 0.0f, 0.5f, 0.5f};
 
+    // Load the model
     Model original_model = load_obj("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
-    /* Model model = load_obj("texcoords.obj"); */
     for (int i = 0; i < original_model.meshes[0].vertexCount; i++) {
         float u = original_model.meshes[0].texcoords[i*2];
         float v = original_model.meshes[0].texcoords[i*2+1];
@@ -273,6 +310,12 @@ int main(void)
             hitObjectName = "Ground";
         }
 
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), tp_rect)) {
+            tp_selection.x = (float)((int)(GetMouseX() - tp_rect.x) / (int)(tp_rect.width / tp_cols)) / (float)tp_cols;
+            tp_selection.y = (float)((int)(GetMouseY() - tp_rect.y) / (int)(tp_rect.height / tp_rows)) / (float)tp_rows;
+            mouse_intercepted = true;
+        }
+
         hitTriangle = false;
         int i;
         for (i = 0; i < m->triangleCount; i++) {
@@ -301,98 +344,89 @@ int main(void)
                 break;
             }
         }
-        if (hitTriangle && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-            for (int j = 0; j < 6; j++) {
-                m->texcoords[i * 6 + j] = original_texcoords[i * 6 + j] + 0.5f;
+
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+            if (!mouse_intercepted && hitTriangle) {
+                for (int j = 0; j < 3; j++) {
+                    m->texcoords[i*6 + j*2 + 0] = original_texcoords[i*6 + j*2 + 0] + tp_selection.x;
+                    m->texcoords[i*6 + j*2 + 1] = original_texcoords[i*6 + j*2 + 1] + tp_selection.y;
+                }
+                rlUpdateMesh(*m, 1, m->triangleCount * 3);
             }
-            rlUpdateMesh(*m, 1, m->triangleCount * 3);
+        } else {
+            mouse_intercepted = false;
         }
 
         hitMeshBBox = false;
 
         if (IsKeyPressed(KEY_E)) {
+            write_obj(model, "texcoords.obj");
+            printf("Exported.\n");
 
-            for (int i = 0; i < 1; i++) {
-
-                FILE *objFile = fopen("texcoords.obj", "wt");
-
-                fprintf(objFile, "# Vertex Count:     %i\n", m->vertexCount);
-                fprintf(objFile, "# Triangle Count:   %i\n\n", m->triangleCount);
-
-                fprintf(objFile, "g mesh\n");
-
-                for (int i = 0, v = 0; i < m->vertexCount; i++, v += 3) {
-                    fprintf(objFile, "v %.3f %.3f %.3f\n", m->vertices[v], m->vertices[v + 1], m->vertices[v + 2]);
-                }
-
-                for (int i = 0, v = 0; i < m->vertexCount; i++, v += 2) {
-                    fprintf(objFile, "vt %.3f %.3f\n", m->texcoords[v], m->texcoords[v + 1]);
-                }
-
-                for (int i = 0, v = 0; i < m->vertexCount; i++, v += 3) {
-                    fprintf(objFile, "vn %.3f %.3f %.3f\n", m->normals[v], m->normals[v + 1], m->normals[v + 2]);
-                }
-
-                for (int i = 0; i < m->triangleCount * 3; i += 3) {
-                    fprintf(objFile, "f %i/%i/%i %i/%i/%i %i/%i/%i\n",
-                            i + 1, i + 1, i + 1, i + 2, i + 2, i + 2, i + 3, i + 3, i + 3
-                    );
-                }
-
-                fprintf(objFile, "\n");
-
-                fclose(objFile);
-                printf("Exported.\n");
-
-                model = load_obj("texcoords.obj");
-                for (int i = 0; i < m->triangleCount * 6; i++) {
-                    saved_texcoords[i] = m->texcoords[i];
-                }
-                m = &(model.meshes[0]);
-                model.materials[0].maps[MAP_DIFFUSE].texture = texture;
+            model = load_obj("texcoords.obj");
+            for (int i = 0; i < m->triangleCount * 6; i++) {
+                saved_texcoords[i] = m->texcoords[i];
             }
+            m = &(model.meshes[0]);
+            model.materials[0].maps[MAP_DIFFUSE].texture = texture;
         }
 
         BeginDrawing();
 
-            ClearBackground(RAYWHITE);
+        ClearBackground(RAYWHITE);
 
-            BeginMode3D(camera);
+        BeginMode3D(camera);
 
-                // Draw the model
-                // WARNING: If scale is different than 1.0f,
-                // not considered by GetCollisionRayModel()
-                DrawModel(model, modelPos, 1.0f, WHITE);
+        // Draw the model
+        // WARNING: If scale is different than 1.0f,
+        // not considered by GetCollisionRayModel()
+        DrawModel(model, modelPos, 1.0f, WHITE);
 
-                // Draw the test triangle
-                DrawLine3D(ta, tb, PURPLE);
-                DrawLine3D(tb, tc, PURPLE);
-                DrawLine3D(tc, ta, PURPLE);
+        // Draw the test triangle
+        DrawLine3D(ta, tb, PURPLE);
+        DrawLine3D(tb, tc, PURPLE);
+        DrawLine3D(tc, ta, PURPLE);
 
-                // Draw the mesh bbox if we hit it
-                if (hitMeshBBox) DrawBoundingBox(modelBBox, LIME);
+        // Draw the mesh bbox if we hit it
+        if (hitMeshBBox) DrawBoundingBox(modelBBox, LIME);
 
-                // If we hit something, draw the cursor at the hit point
-                if (nearestHit.hit) {
-                    DrawCube(nearestHit.position, 0.3, 0.3, 0.3, cursorColor);
-                    DrawCubeWires(nearestHit.position, 0.3, 0.3, 0.3, RED);
+        // If we hit something, draw the cursor at the hit point
+        if (nearestHit.hit) {
+            DrawCube(nearestHit.position, 0.3, 0.3, 0.3, cursorColor);
+            DrawCubeWires(nearestHit.position, 0.3, 0.3, 0.3, RED);
 
-                    Vector3 normalEnd;
-                    normalEnd.x = nearestHit.position.x + nearestHit.normal.x;
-                    normalEnd.y = nearestHit.position.y + nearestHit.normal.y;
-                    normalEnd.z = nearestHit.position.z + nearestHit.normal.z;
+            Vector3 normalEnd;
+            normalEnd.x = nearestHit.position.x + nearestHit.normal.x;
+            normalEnd.y = nearestHit.position.y + nearestHit.normal.y;
+            normalEnd.z = nearestHit.position.z + nearestHit.normal.z;
 
-                    DrawLine3D(nearestHit.position, normalEnd, RED);
-                }
+            DrawLine3D(nearestHit.position, normalEnd, RED);
+        }
 
-                DrawRay(ray, MAROON);
+        DrawRay(ray, MAROON);
 
-                DrawGrid(10, 10.0f);
+        DrawGrid(10, 10.0f);
 
-            EndMode3D();
+        EndMode3D();
 
-            DrawText("Use Mouse to Move Camera", 10, 430, 10, GRAY);
-            DrawFPS(10, 10);
+        DrawTexturePro(
+                texture,
+                (Rectangle){0, 0, texture.width, texture.height},
+                tp_rect,
+                (Vector2){0.0f, 0.0f},
+                0.0f,
+                WHITE);
+        DrawRectangleLines(
+                tp_rect.x + tp_selection.x * tp_rect.width,
+                tp_rect.y + tp_selection.y * tp_rect.height,
+                tp_selection.width * tp_rect.width,
+                tp_selection.height * tp_rect.height,
+                RED);
+
+
+        DrawText(TextFormat("Selection: %f, %f", tp_selection.x, tp_selection.y), 10, 400, 10, GRAY);
+        DrawText("Use Mouse to Move Camera", 10, 430, 10, GRAY);
+        DrawFPS(10, 10);
 
         EndDrawing();
     }

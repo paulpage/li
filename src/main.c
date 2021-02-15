@@ -58,8 +58,6 @@ Model load_obj(const char *filename) {
     m->normals = (float*)calloc(m->vertexCount * 3, sizeof(float));
     m->vboId = (unsigned int *)calloc( 7, sizeof(unsigned int));
 
-    int dbg_i = 0; // TODO remove
-
     char line[256];
     char number_buf[64];
     int offset = 0;
@@ -160,19 +158,15 @@ Model load_obj(const char *filename) {
                 numbers[n] = atoi(number_buf);
             }
 
-            if (dbg_i < 20) {
-                dbg_i++;
-            }
-
             for (int n = 0; n < 3; n++) {
-                m->vertices[triangle_i * 3 + 0] = vertices[(numbers[n * 3] - 1) * 3 + 0];
-                m->vertices[triangle_i * 3 + 1] = vertices[(numbers[n * 3] - 1) * 3 + 1];
-                m->vertices[triangle_i * 3 + 2] = vertices[(numbers[n * 3] - 1) * 3 + 2];
-                m->texcoords[triangle_i * 2 + 0] = texcoords[(numbers[n * 3] - 1) * 2 + 0];
-                m->texcoords[triangle_i * 2 + 1] = texcoords[(numbers[n * 3] - 1) * 2 + 1];
-                m->normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 0];
-                m->normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 1];
-                m->normals[triangle_i * 3 + 3] = normals[(numbers[n * 3] - 1) * 3 + 2];
+                m->vertices[triangle_i * 3 + 0] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 0] * -1.0f;
+                m->vertices[triangle_i * 3 + 1] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 1];
+                m->vertices[triangle_i * 3 + 2] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 2];
+                m->texcoords[triangle_i * 2 + 0] = texcoords[(numbers[(2 - n) * 3] - 1) * 2 + 0];
+                m->texcoords[triangle_i * 2 + 1] = texcoords[(numbers[(2 - n) * 3] - 1) * 2 + 1];
+                /* m->normals[triangle_i * 3 + 0] = normals[(numbers[n * 3] - 1) * 3 + 0]; */
+                /* m->normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 1]; */
+                /* m->normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 2]; */
                 triangle_i++;
             }
         }
@@ -180,17 +174,20 @@ Model load_obj(const char *filename) {
 
     for (int i = 0; i < model.meshCount; i++) rlLoadMesh(&model.meshes[i], false);
     model.transform = MatrixIdentity();
+    /* model.transform = MatrixScale(0.1f, 0.1f, 0.1f); */
     model.materialCount = 1;
     model.materials = (Material *)RL_CALLOC(model.materialCount, sizeof(Material));
     model.materials[0] = LoadMaterialDefault();
     if (model.meshMaterial == NULL) model.meshMaterial = (int *)RL_CALLOC(model.meshCount, sizeof(int));
+    /* MeshTangents(&(model.meshes[0])); */
+    /* MeshBinormals(&(model.meshes[0])); */
 
     return model;
 }
 
 void write_obj(Model model, const char *filename) {
     Mesh *m = &(model.meshes[0]);
-    FILE *objFile = fopen("texcoords.obj", "wt");
+    FILE *objFile = fopen(filename, "wt");
 
     fprintf(objFile, "# Vertex Count:     %i\n", m->vertexCount);
     fprintf(objFile, "# Triangle Count:   %i\n\n", m->triangleCount);
@@ -221,8 +218,8 @@ void write_obj(Model model, const char *filename) {
 
 int main(void)
 {
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenWidth = 1200;
+    const int screenHeight = 800;
     InitWindow(screenWidth, screenHeight, "Island");
 
     // Set up the camera
@@ -237,22 +234,22 @@ int main(void)
     bool mouse_intercepted = false;
 
     // Set up the texture picker
-    int tp_rows = 2;
-    int tp_cols = 2;
-    Rectangle tp_rect = {5, 5, 100, 100};
-    Rectangle tp_selection = {0.0f, 0.0f, 0.5f, 0.5f};
+    int tp_rows = 8;
+    int tp_cols = 8;
+    Rectangle tp_rect = {5, 5, 256, 256};
+    Rectangle tp_selection = {0.0f, 0.0f, 1.0f / (float)tp_rows, 1.0f / (float)tp_rows};
 
     // Load the model
-    Model original_model = load_obj("/home/paul/projects/lidata/z02LGI/meshes/land.obj");
+    Model original_model = load_obj("land_original.obj");
     for (int i = 0; i < original_model.meshes[0].vertexCount; i++) {
         float u = original_model.meshes[0].texcoords[i*2];
         float v = original_model.meshes[0].texcoords[i*2+1];
 
         if (fabs(original_model.meshes[0].texcoords[i*2] - 1.0f) < 0.01f) {
-            original_model.meshes[0].texcoords[i*2] = 0.5f;
+            original_model.meshes[0].texcoords[i*2] = tp_selection.width;
         }
         if (fabs(original_model.meshes[0].texcoords[i*2+1] - 1.0f) < 0.01f) {
-            original_model.meshes[0].texcoords[i*2+1] = 0.5f;
+            original_model.meshes[0].texcoords[i*2+1] = tp_selection.height;
         }
     }
     float *original_texcoords = malloc(sizeof(float) * original_model.meshes[0].triangleCount * 3 * 2);
@@ -260,13 +257,14 @@ int main(void)
         original_texcoords[i] = original_model.meshes[0].texcoords[i];
     }
 
-    Model model = load_obj("texcoords.obj");
+    Model model = load_obj("modified.obj");
     Mesh *m = &(model.meshes[0]);
     float *saved_texcoords = malloc(sizeof(float) * m->triangleCount * 3 * 2);
     for (int i = 0; i < m->triangleCount * 6; i++) {
         saved_texcoords[i] = m->texcoords[i];
     }
     rlUpdateMesh(model.meshes[0], 1, m->vertexCount);
+    rlUpdateMesh(model.meshes[0], 2, m->vertexCount);
 
     /* Texture2D texture = LoadTexture("/home/paul/project/lidata/z04IFC/textures/text028.png"); */
     Texture2D texture = LoadTexture("out.png");
@@ -360,10 +358,10 @@ int main(void)
         hitMeshBBox = false;
 
         if (IsKeyPressed(KEY_E)) {
-            write_obj(model, "texcoords.obj");
+            write_obj(model, "modified.obj");
             printf("Exported.\n");
 
-            model = load_obj("texcoords.obj");
+            model = load_obj("modified.obj");
             for (int i = 0; i < m->triangleCount * 6; i++) {
                 saved_texcoords[i] = m->texcoords[i];
             }

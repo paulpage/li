@@ -48,19 +48,89 @@ void stitch(char *dir, char **paths, int image_count, int *map, int nx, int ny, 
 }
 
 int main() {
-    char *images[4] = {
-        "text027.png",
-        "text028.png",
+    char *images[64] = {
+        "text001.png",
+        "text007.png",
+        "text008.png",
+        "text009.png",
+        "text010.png",
+        "text011.png",
+        "text012.png",
+        "text013.png",
+        "text014.png",
+        "text015.png",
+        "text016.png",
+        "text017.png",
+        "text018.png",
+        "text019.png",
+        "text020.png",
+        "text021.png",
+        "text022.png",
+        "text023.png",
+        "text024.png",
+
+        "text026.png",
+
         "text029.png",
         "text030.png",
-    };
-    int map[4] = {
-        0, 1,
-        2, 3,
-    };
-    char *dir = "/home/paul/projects/lidata/z04IFC/textures/";
+        "text031.png",
+        "text032.png",
+        "text033.png",
+        "text034.png",
+        "text035.png",
+        "text036.png",
+        "text037.png",
+        "text038.png",
+        "text039.png",
+        
+        "text041.png",
+        "text042.png",
+        "text043.png",
+        "text044.png",
+        "text045.png",
+        "text046.png",
+        "text047.png",
+        "text048.png",
+        "text049.png",
+        "text050.png",
+        "text051.png",
+        "text052.png",
+        "text053.png",
+        "text054.png",
+        "text055.png",
+        "text056.png",
+        "text057.png",
+        "text058.png",
+        "text059.png",
+        "text060.png",
+        "text061.png",
+        "text062.png",
+        "text063.png",
+        "text064.png",
+        "text065.png",
+        "text066.png",
+        "text067.png",
+        "text068.png",
+        "text069.png",
+        "text070.png",
 
-    stitch(dir, images, 4, map, 2, 2, "out.png");
+        "text070.png", // Duplicates so we have an even 64
+        "text070.png",
+        "text070.png",
+    };
+    int map[64] = {
+        0,  1,  2,  3,  4,  5,  6,  7,
+        8,  9,  10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23,
+        24, 25, 26, 27, 28, 29, 30, 31,
+        32, 33, 34, 35, 36, 37, 38, 39,
+        40, 41, 42, 43, 44, 45, 46, 47,
+        48, 49, 50, 51, 52, 53, 54, 55,
+        56, 57, 58, 59, 60, 61, 62, 63,
+    };
+    char *dir = "/home/paul/projects/lidata/z02LGI/textures/";
+
+    stitch(dir, images, 64, map, 8, 8, "out.png");
 
     return 0;
 }

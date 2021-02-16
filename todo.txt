@@ -1,3 +1,16 @@
+Texturing
+---------
+
+- [X] Rotate camera
+- [X] Good zoom
+- [X] Bigger Frustrum distance
+- [X] If you hover over a triangle, you can see the vertex coordinates
+- [X] Make sure the thing doesn't flip when you export it (by passing a "flip" arg)
+- [X] Make the texture not get flipped every time
+
+Other
+-----
+
 - [ ] Texture the island
 - [ ] Place the models on the island
 - [ ] Create an animated minifigure

@@ -5,10 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define FLT_MAX 340282346638528859811704183484516925440.0f
 
-Model load_obj(const char *filename) {
+void draw_text(const char *text, int index) {
+    DrawText(text, 10, 300 + index * 25, 20, BLACK);
+}
+
+Model load_obj(const char *filename, bool flip) {
     Model model = {0};
     model.meshCount = 1;
     model.materialCount = 0;
@@ -158,29 +163,40 @@ Model load_obj(const char *filename) {
                 numbers[n] = atoi(number_buf);
             }
 
-            for (int n = 0; n < 3; n++) {
-                m->vertices[triangle_i * 3 + 0] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 0] * -1.0f;
-                m->vertices[triangle_i * 3 + 1] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 1];
-                m->vertices[triangle_i * 3 + 2] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 2];
-                m->texcoords[triangle_i * 2 + 0] = texcoords[(numbers[(2 - n) * 3] - 1) * 2 + 0];
-                m->texcoords[triangle_i * 2 + 1] = texcoords[(numbers[(2 - n) * 3] - 1) * 2 + 1];
-                /* m->normals[triangle_i * 3 + 0] = normals[(numbers[n * 3] - 1) * 3 + 0]; */
-                /* m->normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 1]; */
-                /* m->normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 2]; */
-                triangle_i++;
+            if (flip) {
+                for (int n = 0; n < 3; n++) {
+                    m->vertices[triangle_i * 3 + 0] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 0] * -1.0f;
+                    m->vertices[triangle_i * 3 + 1] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 1];
+                    m->vertices[triangle_i * 3 + 2] = vertices[(numbers[(2 - n) * 3] - 1) * 3 + 2];
+                    m->texcoords[triangle_i * 2 + 0] = texcoords[(numbers[(2 - n) * 3] - 1) * 2 + 0];
+                    m->texcoords[triangle_i * 2 + 1] = texcoords[(numbers[(2 - n) * 3] - 1) * 2 + 1];
+                    m->normals[triangle_i * 3 + 0] = normals[(numbers[n * 3] - 1) * 3 + 0];
+                    m->normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 1];
+                    m->normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 2];
+                    triangle_i++;
+                }
+            } else {
+                for (int n = 0; n < 3; n++) {
+                    m->vertices[triangle_i * 3 + 0] = vertices[(numbers[n * 3] - 1) * 3 + 0];
+                    m->vertices[triangle_i * 3 + 1] = vertices[(numbers[n * 3] - 1) * 3 + 1];
+                    m->vertices[triangle_i * 3 + 2] = vertices[(numbers[n * 3] - 1) * 3 + 2];
+                    m->texcoords[triangle_i * 2 + 0] = texcoords[(numbers[n * 3] - 1) * 2 + 0];
+                    m->texcoords[triangle_i * 2 + 1] = texcoords[(numbers[n * 3] - 1) * 2 + 1];
+                    m->normals[triangle_i * 3 + 0] = normals[(numbers[n * 3] - 1) * 3 + 0];
+                    m->normals[triangle_i * 3 + 1] = normals[(numbers[n * 3] - 1) * 3 + 1];
+                    m->normals[triangle_i * 3 + 2] = normals[(numbers[n * 3] - 1) * 3 + 2];
+                    triangle_i++;
+                }
             }
         }
     }
 
     for (int i = 0; i < model.meshCount; i++) rlLoadMesh(&model.meshes[i], false);
     model.transform = MatrixIdentity();
-    /* model.transform = MatrixScale(0.1f, 0.1f, 0.1f); */
     model.materialCount = 1;
     model.materials = (Material *)RL_CALLOC(model.materialCount, sizeof(Material));
     model.materials[0] = LoadMaterialDefault();
     if (model.meshMaterial == NULL) model.meshMaterial = (int *)RL_CALLOC(model.meshCount, sizeof(int));
-    /* MeshTangents(&(model.meshes[0])); */
-    /* MeshBinormals(&(model.meshes[0])); */
 
     return model;
 }
@@ -240,7 +256,7 @@ int main(void)
     Rectangle tp_selection = {0.0f, 0.0f, 1.0f / (float)tp_rows, 1.0f / (float)tp_rows};
 
     // Load the model
-    Model original_model = load_obj("land_original.obj");
+    Model original_model = load_obj("land_original.obj", true);
     for (int i = 0; i < original_model.meshes[0].vertexCount; i++) {
         float u = original_model.meshes[0].texcoords[i*2];
         float v = original_model.meshes[0].texcoords[i*2+1];
@@ -257,7 +273,10 @@ int main(void)
         original_texcoords[i] = original_model.meshes[0].texcoords[i];
     }
 
-    Model model = load_obj("modified.obj");
+    // We assume that this obj is already flipped. If you restore modified.obj
+    // from the original, you'll have to temporarily set this to true, export
+    // it, then set it back to false.
+    Model model = load_obj("modified.obj", false);
     Mesh *m = &(model.meshes[0]);
     float *saved_texcoords = malloc(sizeof(float) * m->triangleCount * 3 * 2);
     for (int i = 0; i < m->triangleCount * 6; i++) {
@@ -285,7 +304,7 @@ int main(void)
 
     SetCameraMode(camera, CAMERA_FREE);
 
-    SetTargetFPS(60);
+    /* SetTargetFPS(60); */
     while (!WindowShouldClose()) {
         UpdateCamera(&camera);
 
@@ -361,7 +380,7 @@ int main(void)
             write_obj(model, "modified.obj");
             printf("Exported.\n");
 
-            model = load_obj("modified.obj");
+            model = load_obj("modified.obj", false);
             for (int i = 0; i < m->triangleCount * 6; i++) {
                 saved_texcoords[i] = m->texcoords[i];
             }
@@ -384,6 +403,7 @@ int main(void)
         DrawLine3D(ta, tb, PURPLE);
         DrawLine3D(tb, tc, PURPLE);
         DrawLine3D(tc, ta, PURPLE);
+
 
         // Draw the mesh bbox if we hit it
         if (hitMeshBBox) DrawBoundingBox(modelBBox, LIME);
@@ -421,9 +441,16 @@ int main(void)
                 tp_selection.height * tp_rect.height,
                 RED);
 
-
-        DrawText(TextFormat("Selection: %f, %f", tp_selection.x, tp_selection.y), 10, 400, 10, GRAY);
-        DrawText("Use Mouse to Move Camera", 10, 430, 10, GRAY);
+        draw_text(TextFormat("Tex Coords: (%.3f %.3f) (%.3f %.3f) (%.3f %.3f)",
+                    m->texcoords[i*6 + 0],
+                    m->texcoords[i*6 + 1],
+                    m->texcoords[i*6 + 2],
+                    m->texcoords[i*6 + 3],
+                    m->texcoords[i*6 + 4],
+                    m->texcoords[i*6 + 5]),
+                0);
+        draw_text(TextFormat("Selection: %f, %f", tp_selection.x, tp_selection.y), 1);
+        draw_text("Use Mouse to Move Camera", 2);
         DrawFPS(10, 10);
 
         EndDrawing();

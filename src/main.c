@@ -191,7 +191,8 @@ Model load_obj(const char *filename, bool flip) {
         }
     }
 
-    for (int i = 0; i < model.meshCount; i++) rlLoadMesh(&model.meshes[i], false);
+    /* for (int i = 0; i < model.meshCount; i++) rlLoadMesh(&model.meshes[i], false); */
+    for (int i = 0; i < model.meshCount; i++) UploadMesh(&model.meshes[i], true);
     model.transform = MatrixIdentity();
     model.materialCount = 1;
     model.materials = (Material *)RL_CALLOC(model.materialCount, sizeof(Material));
@@ -239,12 +240,12 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "Island");
 
     // Set up the camera
-    Camera camera = { 0 };
+    Camera3D camera = { 0 };
     camera.position = (Vector3){ 20.0f, 20.0f, 20.0f };
     camera.target = (Vector3){ 0.0f, 8.0f, 0.0f };
     camera.up = (Vector3){ 0.0f, 1.6f, 0.0f };
     camera.fovy = 45.0f;
-    camera.type = CAMERA_PERSPECTIVE;
+    /* camera.type = CAMERA_PERSPECTIVE; */
 
     Ray ray = {0};
     bool mouse_intercepted = false;
@@ -282,16 +283,17 @@ int main(void)
     for (int i = 0; i < m->triangleCount * 6; i++) {
         saved_texcoords[i] = m->texcoords[i];
     }
-    rlUpdateMesh(model.meshes[0], 1, m->vertexCount);
-    rlUpdateMesh(model.meshes[0], 2, m->vertexCount);
+    /* rlUpdateMesh(model.meshes[0], 1, m->vertexCount); */
+    /* rlUpdateMesh(model.meshes[0], 2, m->vertexCount); */
+    UploadMesh(&model.meshes[0], true);
 
     /* Texture2D texture = LoadTexture("/home/paul/project/lidata/z04IFC/textures/text028.png"); */
     Texture2D texture = LoadTexture("out.png");
-    SetTextureWrap(texture, WRAP_CLAMP);
-    model.materials[0].maps[MAP_DIFFUSE].texture = texture;
+    SetTextureWrap(texture, TEXTURE_WRAP_CLAMP);
+    model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
 
     Vector3 modelPos = { 0.0f, 0.0f, 0.0f };
-    BoundingBox modelBBox = MeshBoundingBox(model.meshes[0]);
+    BoundingBox modelBBox = GetMeshBoundingBox(model.meshes[0]);
     bool hitMeshBBox = false;
     bool hitTriangle = false;
 
@@ -309,7 +311,7 @@ int main(void)
         UpdateCamera(&camera);
 
         // Display information about closest hit
-        RayHitInfo nearestHit = { 0 };
+        RayCollision nearestHit = { 0 };
         char *hitObjectName = "None";
         nearestHit.distance = FLT_MAX;
         nearestHit.hit = false;
@@ -319,13 +321,13 @@ int main(void)
         ray = GetMouseRay(GetMousePosition(), camera);
 
         // Check ray collision aginst ground plane
-        RayHitInfo groundHitInfo = GetCollisionRayGround(ray, 0.0f);
+        /* RayCollision groundHitInfo = GetCollisionRayGround(ray, 0.0f); */
 
-        if ((groundHitInfo.hit) && (groundHitInfo.distance < nearestHit.distance)) {
-            nearestHit = groundHitInfo;
-            cursorColor = GREEN;
-            hitObjectName = "Ground";
-        }
+        /* if ((groundHitInfo.hit) && (groundHitInfo.distance < nearestHit.distance)) { */
+        /*     nearestHit = groundHitInfo; */
+        /*     cursorColor = GREEN; */
+        /*     hitObjectName = "Ground"; */
+        /* } */
 
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), tp_rect)) {
             tp_selection.x = (float)((int)(GetMouseX() - tp_rect.x) / (int)(tp_rect.width / tp_cols)) / (float)tp_cols;
@@ -351,12 +353,12 @@ int main(void)
                 m->vertices[i * 9 + 7],
                 m->vertices[i * 9 + 8],
             };
-            RayHitInfo triHitInfo = GetCollisionRayTriangle(ray, ta, tb, tc);
+            RayCollision triHitInfo = GetRayCollisionTriangle(ray, ta, tb, tc);
             if ((triHitInfo.hit) && (triHitInfo.distance < nearestHit.distance)) {
                 nearestHit = triHitInfo;
                 cursorColor = PURPLE;
                 hitObjectName = "Triangle";
-                bary = Vector3Barycenter(nearestHit.position, ta, tb, tc);
+                bary = Vector3Barycenter(nearestHit.point, ta, tb, tc);
                 hitTriangle = true;
                 break;
             }
@@ -368,7 +370,8 @@ int main(void)
                     m->texcoords[i*6 + j*2 + 0] = original_texcoords[i*6 + j*2 + 0] + tp_selection.x;
                     m->texcoords[i*6 + j*2 + 1] = original_texcoords[i*6 + j*2 + 1] + tp_selection.y;
                 }
-                rlUpdateMesh(*m, 1, m->triangleCount * 3);
+                /* rlUpdateMesh(*m, 1, m->triangleCount * 3); */
+                UploadMesh(m, true);
             }
         } else {
             mouse_intercepted = false;
@@ -385,7 +388,7 @@ int main(void)
                 saved_texcoords[i] = m->texcoords[i];
             }
             m = &(model.meshes[0]);
-            model.materials[0].maps[MAP_DIFFUSE].texture = texture;
+            model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
         }
 
         BeginDrawing();
@@ -410,15 +413,15 @@ int main(void)
 
         // If we hit something, draw the cursor at the hit point
         if (nearestHit.hit) {
-            DrawCube(nearestHit.position, 0.3, 0.3, 0.3, cursorColor);
-            DrawCubeWires(nearestHit.position, 0.3, 0.3, 0.3, RED);
+            DrawCube(nearestHit.point, 0.3, 0.3, 0.3, cursorColor);
+            DrawCubeWires(nearestHit.point, 0.3, 0.3, 0.3, RED);
 
             Vector3 normalEnd;
-            normalEnd.x = nearestHit.position.x + nearestHit.normal.x;
-            normalEnd.y = nearestHit.position.y + nearestHit.normal.y;
-            normalEnd.z = nearestHit.position.z + nearestHit.normal.z;
+            normalEnd.x = nearestHit.point.x + nearestHit.normal.x;
+            normalEnd.y = nearestHit.point.y + nearestHit.normal.y;
+            normalEnd.z = nearestHit.point.z + nearestHit.normal.z;
 
-            DrawLine3D(nearestHit.position, normalEnd, RED);
+            DrawLine3D(nearestHit.point, normalEnd, RED);
         }
 
         DrawRay(ray, MAROON);

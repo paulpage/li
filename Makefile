@@ -1,7 +1,7 @@
 all: main stitch
 
-main: main.c
-	${CC} main.c -lm -lraylib -g -o main
+main:
+	${CC} src/main.c -g -o main -lm -lraylib
 
 stitch: stitch.c
 	${CC} stitch.c -lm -g -o stitch

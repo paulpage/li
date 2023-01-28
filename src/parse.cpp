@@ -1,6 +1,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+// mkdir
+#include <sys/types.h>
+#include <sys/stat.h>
+
+// ls
+#include <dirent.h>
 
 #define PSTR_SIZE 1024
 
@@ -9,39 +17,27 @@ typedef struct {
     char data[PSTR_SIZE];
 } PathString;
 
-/* static PathString full_path = {0}; */
-/* static PathString name = {0}; */
+typedef enum {
+    ENTRY_DIR,
+    ENTRY_FILE,
+} EntryType;
 
-int pstr_add(PathString *dest, const char *data, int len) {
-    int i;
-    for (i = 0; i < len && dest->len + i < PSTR_SIZE - 1; i++) {
-        dest->data[dest->len + i] = data[i];
-    }
-    dest->len += i;
-    return i;
-}
+typedef struct {
+    EntryType type;
+    uint32_t len;
+    uint32_t offset;
+    uint32_t name_offset;
+} Entry;
 
-PathString pstr_from_cstr(const uint8_t *data, int *i) {
-    PathString pstr = {0};
-    int j;
-    for (j = 0; data[*i + j] != '\0'; j++) {
-        pstr.data[j] = (char)data[*i + j];
-    }
-    pstr.len = j;
-    *i += j;
-    return pstr;
-}
-
-uint32_t get_u32(const uint8_t *data, int *i) {
-    uint32_t val = (data[*i])
-        + (data[*i+1] << 8)
-        + (data[*i+2] << 16)
-        + (data[*i+3] << 24);
-    *i += 4;
+uint32_t get_u32(const uint8_t *data, int i) {
+    uint32_t val = (data[i])
+        + (data[i+1] << 8)
+        + (data[i+2] << 16)
+        + (data[i+3] << 24);
     return val;
 }
 
-uint8_t *read_entire_file(const char *filename, long *out_len) {
+uint8_t *read_file(const char *filename, long *out_len) {
     FILE *f;
     uint8_t *buf;
 
@@ -56,92 +52,142 @@ uint8_t *read_entire_file(const char *filename, long *out_len) {
     return buf;
 }
 
-void extract_file(const uint8_t *data, int *i, PathString *full_path) {
+size_t write_file(const char *filename, uint8_t *data, long len) {
+    FILE *f = fopen(filename, "wb");
+    if (!f) {
+        perror("no file");
+        fflush(0);
+        /* printf("no file\n"); */
+        return 0;
+    }
 
-    /* PathString full_path = {0}; */
+    return fwrite(data, len, 1, f);
+}
 
-    /* pstr_add(&full_path, name.data, name.len); */
-    /* pstr_add(&full_path, "/", 1); */
+static void mkdir_recursive(const char *dir) {
+    char tmp[256];
+    char *p = NULL;
+    size_t len;
 
-    char ft[4] = {0};
-    ft[0] = (char)data[*i + 0];
-    ft[1] = (char)data[*i + 1];
-    ft[2] = (char)data[*i + 2];
-    ft[3] = (char)data[*i + 3];
-    *i += 4;
-
-    if (ft[0] == 'D' && ft[1] == 'I' && ft[2] == 'R' && ft[3] == 'Y') {
-        printf("DIRY\n");
-
-        uint32_t count = get_u32(data, i);
-        printf("  count: %d\n", count);
-        uint32_t unknown = get_u32(data, i); // unused
-        printf("  unknown: %d\n", unknown);
-        uint32_t folder_name_offset = get_u32(data, i);
-        printf("  folder_name_offset: %d\n", folder_name_offset);
-
-        int file_offset = *i;
-
-        *i = folder_name_offset;
-
-        PathString name = pstr_from_cstr(data, i);
-        printf("  name: [%s]\n", name.data);
-
-
-        *i = file_offset;
-
-        for (int j = 0; j < count; j++) {
-            PathString new_full_path = {0};
-            pstr_add(&new_full_path, full_path->data, full_path->len);
-            pstr_add(full_path, name.data, name.len);
-            pstr_add(full_path, "/", 1);
-            extract_file(data, i, &new_full_path);
+    snprintf(tmp, sizeof(tmp),"%s",dir);
+    len = strlen(tmp);
+    if (tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
+    for (p = tmp + 1; *p; p++)
+        if (*p == '/') {
+            *p = 0;
+            mkdir(tmp, S_IRWXU);
+            *p = '/';
         }
+    mkdir(tmp, S_IRWXU);
+}
 
-    } else if (ft[0] == 'F' && ft[1] == 'I' && ft[2] == 'L' && ft[3] == 'E') {
-        /* printf("FILE\n"); */
+char **list_dir(char *dir, int *out_len) {
+    struct dirent *d;
+    DIR *dh = opendir(dir);
+    if (!dh) {
+        *out_len = 0;
+        return 0;
+    }
 
+    while ((d = readdir(dh)) != NULL) {
         // TODO
-        uint32_t out_file_size = get_u32(data, i);
-        uint32_t out_file_offset = get_u32(data, i);
-        uint32_t filename_offset = get_u32(data, i);
-
-        int file_offset = *i;
-
-        *i = filename_offset;
-        PathString filename = pstr_from_cstr(data, i);
-        *i = file_offset;
-        PathString full_name = *full_path;
-        pstr_add(&full_name, filename.data, filename.len);
-        // TODO write file
-        printf("FILE [%s] [%s] offset %d len %d\n", filename.data, full_name.data, out_file_offset, out_file_size);
     }
 }
 
-// actual file offset: 2de4
+Entry *extract_entries(const uint8_t *info_data, int offset, int count) {
+
+    Entry *entries = (Entry*)malloc(sizeof(Entry) * count);
+
+    for (int i = 0; i < count; i++) {
+
+        int j = offset + i * 16;
+
+        char ft[4] = {0};
+        ft[0] = (char)info_data[j + 0];
+        ft[1] = (char)info_data[j + 1];
+        ft[2] = (char)info_data[j + 2];
+        ft[3] = (char)info_data[j + 3];
+
+        uint32_t v1 = get_u32(info_data, j + 4);
+        uint32_t v2 = get_u32(info_data, j + 8);
+        uint32_t count = get_u32(info_data, j + 12);
+
+        Entry e;
+        if (ft[0] == 'D' && ft[1] == 'I' && ft[2] == 'R' && ft[3] == 'Y') {
+            e.type = ENTRY_DIR;
+        } else if (ft[0] == 'F' && ft[1] == 'I' && ft[2] == 'L' && ft[3] == 'E') {
+            e.type = ENTRY_FILE;
+        }
+        e.len = get_u32(info_data, j + 4);
+        e.offset = get_u32(info_data, j + 8);
+        e.name_offset = get_u32(info_data, j + 12);
+        entries[i] = e;
+    }
+
+    return entries;
+}
+
+static char filename[255];
+void process_entry(uint8_t *info_data, uint8_t *file_data, Entry *entries, int *i, int stack[16], int stack_pos) {
+    Entry entry = entries[*i];
+
+    stack[stack_pos] = entry.name_offset;
+    stack_pos += 1;
+
+    if (entry.type == ENTRY_DIR) {
+        for (int j = 0; j < entry.len; j++) {
+            int old_i = *i;
+            *i = entry.offset + j;
+            process_entry(info_data, file_data, entries, i, stack, stack_pos);
+            *i = old_i + 1;
+        }
+    } else if (entry.type == ENTRY_FILE) {
+
+        int fpos = 0;
+        /* memset(filename, 0, 255); */
+        for (int j = 0; j < stack_pos - 1; j++) {
+            for (int c = stack[j]; info_data[c] != '\0'; c++) {
+                filename[fpos] = info_data[c];
+                fpos++;
+            }
+            filename[fpos] = '/';
+            fpos++;
+        }
+
+        mkdir_recursive(filename);
+
+        int j = stack_pos - 1;
+        for (int c = stack[j]; info_data[c] != '\0'; c++) {
+            filename[fpos] = info_data[c];
+            fpos++;
+        }
+        filename[fpos] = '\0';
+
+        printf("%s\n", filename);
+        write_file(filename, &file_data[entry.offset], entry.len);
+    }
+}
 
 int main(int argc, char **argv) {
 
+    long file_data_len;
     long len;
-    uint8_t *data = read_entire_file("/home/paul/Downloads/li2/cabs/Game/_data/z01BPK.bod", &len);
-
-    printf("len: %ld\n", len);
+    uint8_t *file_data = read_file("/home/paul/Downloads/li2/cabs/Game/_data/z01BPK.bob", &file_data_len);
+    uint8_t *info_data = read_file("/home/paul/Downloads/li2/cabs/Game/_data/z01BPK.bod", &len);
 
     int i;
     i = len - 16;
 
-    uint32_t file_offset = get_u32(data, &i);
-    printf("file_offset: %d\n", file_offset);
-    uint32_t file_count = get_u32(data, &i);
-    printf("file_count: %d\n", file_count);
-    uint32_t filename_offset = get_u32(data, &i);
-    printf("filename_offset: %d\n", filename_offset);
+    uint32_t file_offset = get_u32(info_data, len - 16);
+    uint32_t file_count = get_u32(info_data, len - 16 + 4);
+    uint32_t filename_offset = get_u32(info_data, len - 16 + 8);
 
-    i = file_offset;
+    Entry *entries = extract_entries(info_data, file_offset, file_count);
 
-    PathString full_path = {0};
-
-    extract_file(data, &i, &full_path);
+    i = 0;
+    int stack[16] = {0};
+    process_entry(info_data, file_data, entries, &i, stack, 0);
 
     return 0;
 }

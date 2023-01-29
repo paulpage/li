@@ -25,6 +25,10 @@ Model load_obj(const char *filename, bool flip) {
     // Read the file to a buffer
     FILE *f;
     f = fopen(filename, "rb");
+    if (!f) {
+        printf("Couldn't open obj file %s\n", filename);
+        return model;
+    }
     fseek(f, 0, SEEK_END);
     size_t file_len = (size_t)ftell(f);
     fseek(f, 0, SEEK_SET);

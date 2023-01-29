@@ -10,29 +10,31 @@
 // ls
 #include <dirent.h>
 
+#include <iostream>
+
 #define PSTR_SIZE 1024
 
-typedef struct {
+struct PathString {
     int len;
     char data[PSTR_SIZE];
-} PathString;
+};
 
-typedef enum {
+enum EntryType {
     ENTRY_DIR,
     ENTRY_FILE,
-} EntryType;
+};
 
-typedef struct {
+struct Entry {
     EntryType type;
     uint32_t len;
     uint32_t offset;
     uint32_t name_offset;
-} Entry;
+};
 
-typedef struct {
+struct Pack {
     char bod[255];
     char bob[255];
-} Pack;
+};
 
 uint32_t get_u32(const uint8_t *data, int i) {
     uint32_t val = (data[i])
@@ -256,6 +258,8 @@ int main(int argc, char **argv) {
         printf("%s\n", pack_list[i].bod);
         process_pack(pack_list[i]);
     }
+
+    std::cout << "Hello" << std::endl;
 
     return 0;
 }

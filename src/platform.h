@@ -19,7 +19,7 @@ struct Point {
     float y;
 };
 
-struct AppState {
+struct App {
 
     Point window;
 
@@ -36,13 +36,15 @@ struct AppState {
 
 };
 
-bool app_init(const char *title, int window_width, int window_height);
+App app_init(const char *title, int window_width, int window_height);
 void app_quit();
 
-void app_update(AppState *app_state);
+void app_update(App *app);
 
-void app_clear(Color color);
-void app_present();
+void app_clear(App *app, Color color);
+void app_present(App *app);
+
+void app_draw_rect(App *app, Rect rect, Color color);
 
 GLuint gl_create_shader(GLenum type, const GLchar *src);
 GLuint gl_create_program(const char *vert_src, const char *frag_src);

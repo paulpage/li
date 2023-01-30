@@ -1,3 +1,6 @@
+#ifndef _PLATFORM_H
+#define _PLATFORM_H
+
 #include <stdint.h>
 
 #include "SDL.h"
@@ -49,3 +52,5 @@ void app_draw_rect(Rect rect, Color color);
 
 GLuint gl_create_shader(GLenum type, const GLchar *src);
 GLuint gl_create_program(const char *vert_src, const char *frag_src);
+
+#endif // _PLATFORM_H

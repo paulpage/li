@@ -5,6 +5,8 @@
 #include <GL/glew.h>
 #include <GL/glu.h>
 
+#include <stdio.h>
+
 const GLchar *TRI_VERT_SRC =
     "#version 330 core\n"
     "in vec2 position;"
@@ -164,8 +166,8 @@ void app_update(App *s) {
                 }
                 break;
             case SDL_MOUSEWHEEL:
-                s->scroll.x += (float)e.wheel.preciseX;
-                s->scroll.y += (float)e.wheel.preciseY;
+                s->scroll.x += (float)e.wheel.x;
+                s->scroll.y += (float)e.wheel.y;
                 break;
             case SDL_MOUSEMOTION:
                 s->mouse.x = (float)e.motion.x;

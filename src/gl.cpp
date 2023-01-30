@@ -1,5 +1,7 @@
 #include "platform.h"
 
+#include <stdio.h>
+
 GLuint gl_create_shader(GLenum type, const GLchar *src) {
     GLuint id = glCreateShader(type);
     glShaderSource(id, 1, &src, NULL);

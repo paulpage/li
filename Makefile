@@ -1,4 +1,4 @@
-all: main stitch parse
+all: main stitch parse mesh_loader
 
 SRC=src/main.cpp src/platform.cpp src/gl.cpp
 FAKESRC=src/shapes.cpp
@@ -15,7 +15,10 @@ stitch: src/stitch.c
 parse:  src/parse.cpp
 	g++ src/parse.cpp -g -o parse -Ilib
 
+mesh_loader: src/mesh_loader.cpp
+	g++ src/mesh_loader.cpp -g -o parse -Ilib
+
 clean:
-	rm -f main stitch parse
+	rm -f main stitch parse mesh_loader
 
 .PHONY: all

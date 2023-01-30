@@ -3,7 +3,7 @@
 #include "platform.h"
 
 int main(int argc, char **argv) {
-    AppState app = {0};
+    App app = {0};
     if (!app_init("Sample", 400, 400)) {
         return 1;
     }
@@ -13,16 +13,19 @@ int main(int argc, char **argv) {
     Color foreground = {0, 0, 255, 255};
     Rect rect = {10.0f, 10.0f, 50.0f, 50.0f};
 
-    while (!state.should_quit) {
+    while (!app.should_quit) {
         app_update(&app);
 
-        printf("window: (%.2f, %.2f) mouse: (%.2f, %.2f)  scroll: (%.2f, %.2f) buttons: %d/%d %d/%d %d/%d\n",
-                state.window.x, state.window.y, state.mouse.x, state.mouse.y, state.scroll.x, state.scroll.y,
-                state.mouse_left_down, state.mouse_left_pressed, state.mouse_middle_down, state.mouse_middle_pressed, state.mouse_right_down, state.mouse_right_pressed);
+        /* printf("window: (%.2f, %.2f) mouse: (%.2f, %.2f)  scroll: (%.2f, %.2f) buttons: %d/%d %d/%d %d/%d\n", */
+        /*         app.window.x, app.window.y, app.mouse.x, app.mouse.y, app.scroll.x, app.scroll.y, */
+        /*         app.mouse_left_down, app.mouse_left_pressed, app.mouse_middle_down, app.mouse_middle_pressed, app.mouse_right_down, app.mouse_right_pressed); */
 
         app_clear(background);
 
-        app_draw_rect(rect, color);
+        rect.x = app.mouse.x;
+        rect.y = app.mouse.y;
+
+        app_draw_rect(rect, foreground);
 
         app_present();
     }

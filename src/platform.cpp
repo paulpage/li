@@ -48,6 +48,22 @@ struct State {
 
 static State state = {0};
 
+#include "shapes.cpp"
+
+void GLAPIENTRY gl_error_callback(
+    GLenum source,
+    GLenum type,
+    GLuint id,
+    GLenum severity,
+    GLsizei length,
+    const GLchar* message,
+    const void* userParam
+) {
+    fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+            ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+            type, severity, message );
+}
+
 bool app_init(const char *title, int window_width, int window_height) {
 
     state.window_width = (float)window_width;
@@ -101,6 +117,9 @@ bool app_init(const char *title, int window_width, int window_height) {
         return false;
     }
 
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(gl_error_callback, 0);
+
     return true;
 }
 
@@ -125,7 +144,7 @@ void app_present() {
     SDL_GL_SwapWindow(state.window);
 }
 
-void app_update(AppState *s) {
+void app_update(App *s) {
     SDL_Event e;
 
     s->mouse_left_pressed = false;

@@ -5,18 +5,19 @@
 #include <GL/glu.h>
 #include "SDL_opengl.h"
 
+struct Rect {
+    float x, y, width, height;
+};
 
+struct Point {
+    float x, y;
+};
 
 struct Color {
     uint8_t r;
     uint8_t g;
     uint8_t b;
     uint8_t a;
-};
-
-struct Point {
-    float x;
-    float y;
 };
 
 struct App {
@@ -36,15 +37,15 @@ struct App {
 
 };
 
-App app_init(const char *title, int window_width, int window_height);
+bool app_init(const char *title, int window_width, int window_height);
 void app_quit();
 
 void app_update(App *app);
 
-void app_clear(App *app, Color color);
-void app_present(App *app);
+void app_clear(Color color);
+void app_present();
 
-void app_draw_rect(App *app, Rect rect, Color color);
+void app_draw_rect(Rect rect, Color color);
 
 GLuint gl_create_shader(GLenum type, const GLchar *src);
 GLuint gl_create_program(const char *vert_src, const char *frag_src);

@@ -7,37 +7,6 @@
 
 #include <stdio.h>
 
-const GLchar *TRI_VERT_SRC =
-    "#version 330 core\n"
-    "in vec2 position;"
-    "in vec4 color;"
-    "out vec4 v_color;"
-    "void main() {"
-    "  v_color = color;"
-    "  gl_Position = vec4(position.x, position.y, 0, 1);"
-    "}";
-
-const GLchar* TRI_FRAG_SRC =
-    "#version 330 core\n"
-    "in vec4 v_color;"
-    "out vec4 LFragment;"
-    "void main() {"
-    "  LFragment = v_color;"
-    "}";
-
-const char *BASIC_VERT_SRC = "#version 330 core\n"
-    "layout(location = 0) in vec4 position;\n"
-    "void main() {\n"
-    "  gl_Position = position;\n"
-    "}\n";
-
-const char *BASIC_FRAG_SRC = "#version 330 core\n"
-    "out vec4 output_color;\n"
-    "in vec4 v_color;\n"
-    "void main() {\n"
-    "  output_color = vec4(0.0f, 0.0f, 0.7f, 1.0f);\n"
-    "}\n";
-
 struct State {
     float window_width;
     float window_height;
@@ -45,12 +14,13 @@ struct State {
     SDL_Window *window;
     SDL_GLContext context;
     GLuint tri_program_id;
-    GLuint basic_program_id;
+    /* GLuint basic_program_id; */
 };
 
 static State state = {0};
 
 #include "shapes.cpp"
+#include "shaders.cpp"
 
 void GLAPIENTRY gl_error_callback(
     GLenum source,
@@ -114,7 +84,7 @@ bool app_init(const char *title, int window_width, int window_height) {
     if (!state.tri_program_id) {
         return false;
     }
-    state.basic_program_id = gl_create_program(BASIC_VERT_SRC, BASIC_FRAG_SRC);
+    /* state.basic_program_id = gl_create_program(BASIC_VERT_SRC, BASIC_FRAG_SRC); */
     if (!state.tri_program_id) {
         return false;
     }

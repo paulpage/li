@@ -48,6 +48,7 @@ void app_update(App *app);
 void app_clear(Color color);
 void app_present();
 
+void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *rotations, int count);
 void app_draw_rect(Rect rect, Color color);
 
 GLuint gl_create_shader(GLenum type, const GLchar *src);

@@ -13,6 +13,8 @@ int main(int argc, char **argv) {
     Color foreground = {0, 0, 255, 255};
     Rect rect = {10.0f, 10.0f, 50.0f, 50.0f};
 
+    float rotation = 0.0f;
+
     while (!app.should_quit) {
         app_update(&app);
 
@@ -25,7 +27,9 @@ int main(int argc, char **argv) {
         rect.x = app.mouse.x;
         rect.y = app.mouse.y;
 
-        app_draw_rect(rect, foreground);
+        Point origin = {25.0f, 25.0f};
+        rotation += 0.01f;
+        app_draw_rotated_rects(&rect, &foreground, &origin, &rotation, 1);
 
         app_present();
     }

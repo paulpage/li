@@ -1,6 +1,5 @@
 #ifndef _PLATFORM_H
 #define _PLATFORM_H
-
 #include <stdint.h>
 
 #include "SDL.h"
@@ -21,6 +20,12 @@ struct Color {
     uint8_t g;
     uint8_t b;
     uint8_t a;
+};
+
+struct Texture {
+    float width;
+    float height;
+    uint32_t id;
 };
 
 struct App {
@@ -50,6 +55,12 @@ void app_present();
 
 void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *rotations, int count);
 void app_draw_rect(Rect rect, Color color);
+
+void app_draw_rotated_textures(Texture texture, Rect *src_rects, Rect *dest_rects, Point *origins, float *rotations, int count);
+void app_draw_texture(Texture texture, Rect src_rect, Rect dest_rect);
+
+Texture app_load_texture(unsigned char *data, int width, int height);
+Texture app_load_texture_from_file(const char *filename);
 
 GLuint gl_create_shader(GLenum type, const GLchar *src);
 GLuint gl_create_program(const char *vert_src, const char *frag_src);

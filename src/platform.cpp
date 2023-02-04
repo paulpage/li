@@ -14,6 +14,7 @@ struct State {
     SDL_Window *window;
     SDL_GLContext context;
     GLuint tri_program_id;
+    GLuint texture_program_id;
     /* GLuint basic_program_id; */
 };
 
@@ -76,21 +77,24 @@ bool app_init(const char *title, int window_width, int window_height) {
         printf("Warning: Unable to set VSync: %s\n", SDL_GetError());
     }
 
-
+    glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_MULTISAMPLE);
+    glEnable(GL_BLEND);
+    glDebugMessageCallback(gl_error_callback, 0);
 
     // GL Programs
     state.tri_program_id = gl_create_program(TRI_VERT_SRC, TRI_FRAG_SRC);
     if (!state.tri_program_id) {
         return false;
     }
-    /* state.basic_program_id = gl_create_program(BASIC_VERT_SRC, BASIC_FRAG_SRC); */
-    if (!state.tri_program_id) {
+    state.texture_program_id = gl_create_program(TEXTURE_VERT_SRC, TEXTURE_FRAG_SRC);
+    if (!state.texture_program_id) {
         return false;
     }
-
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(gl_error_callback, 0);
+    /* state.basic_program_id = gl_create_program(BASIC_VERT_SRC, BASIC_FRAG_SRC); */
+    /* if (!state.basic_program_id) { */
+    /*     return false; */
+    /* } */
 
     return true;
 }

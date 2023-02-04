@@ -16,8 +16,8 @@ const GLchar *TRI_FRAG_SRC =
     "  LFragment = v_color;\n"
     "}\n";
 
-const GLchar *TEXTURE_VERT_SEC =
-    "const GLchar* TEXT_VERT_SRC =\n"
+const GLchar *TEXTURE_VERT_SRC =
+    "#version 330 core\n"
     "layout (location = 0) in vec2 position;\n"
     "layout (location = 1) in vec2 tex_coords;\n"
     "\n"
@@ -29,6 +29,7 @@ const GLchar *TEXTURE_VERT_SEC =
     "}\n";
 
 const GLchar *TEXTURE_FRAG_SRC =
+    "#version 330 core\n"
     "uniform sampler2D tex;\n"
     "in vec2 v_tex_coords;\n"
     "out vec4 f_color;\n"
@@ -38,6 +39,7 @@ const GLchar *TEXTURE_FRAG_SRC =
     "}\n";
 
 const GLchar *TEXT_VERT_SRC =
+    "#version 330 core\n"
     "layout (location = 0) in vec2 position;\n"
     "layout (location = 1) in vec2 tex_coords;\n"
     "layout (location = 2) in vec4 color;\n"
@@ -52,6 +54,7 @@ const GLchar *TEXT_VERT_SRC =
     "}\n";
 
 const GLchar *TEXT_FRAG_SRC =
+    "#version 330 core\n"
     "uniform sampler2D tex;\n"
     "in vec2 v_tex_coords;\n"
     "in vec4 v_color;\n"

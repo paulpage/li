@@ -13,6 +13,10 @@ int main(int argc, char **argv) {
     Color foreground = {0, 0, 255, 255};
     Rect rect = {10.0f, 10.0f, 50.0f, 50.0f};
 
+    Rect destrect = {40.0f, 40.0f, 256.0f, 256.0f};
+    Rect srcrect = {0.0f, 0.0f, 128.0f, 128.0f};
+    Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png");
+
     float rotation = 0.0f;
 
     while (!app.should_quit) {
@@ -30,6 +34,8 @@ int main(int argc, char **argv) {
         Point origin = {25.0f, 25.0f};
         rotation += 0.01f;
         app_draw_rotated_rects(&rect, &foreground, &origin, &rotation, 1);
+
+        app_draw_texture(texture, srcrect, destrect);
 
         app_present();
     }

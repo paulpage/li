@@ -159,8 +159,8 @@ void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *r
 }
 
 void app_draw_rect(Rect rect, Color color) {
-    float rotation = 0.0f;
     Point origin = {0.0f, 0.0f};
+    float rotation = 0.0f;
     app_draw_rotated_rects(&rect, &color, &origin, &rotation, 1);
 }
 
@@ -189,8 +189,8 @@ void app_draw_rotated_textures(Texture texture, Rect *src_rects, Rect *dest_rect
 }
 
 void app_draw_texture(Texture texture, Rect src_rect, Rect dest_rect) {
-    float rotation = 0.0f;
     Point origin = {0.0f, 0.0f};
+    float rotation = 0.0f;
     app_draw_rotated_textures(texture, &src_rect, &dest_rect, &origin, &rotation, 1);
 }
 
@@ -215,4 +215,77 @@ Texture app_load_texture_from_file(const char *filename) {
     Texture texture = app_load_texture(data, width, height);
     stbi_image_free(data);
     return texture;
+}
+
+void app_load_font(const char *filename) {
+    state.font = {0};
+    state.font.buf = read_file(filename, &state.font.buflen);
+    stbtt_InitFont(&state.font.info, state.font.buf, 0);
+    int x0, y0, x1, y1;
+    /* stbtt_GetFontBoundingBox(&state.font.info, &x0, &y0, &x1, &y1); */
+    /* state.font.bbox_width = x1 - x0; */
+    /* state.font.bbox_height = y1 - y0; */
+}
+
+void app_draw_rotated_text(const char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count) {
+
+    Font font = state.font;
+
+    for (int i = 0; i < count; i++) {
+
+        // TODO respect font size
+
+        int buf_width = (int)sizes[i] * strlen(texts[i]);
+        int buf_height = (int)sizes[i];
+        unsigned char *buf = (unsigned char *)calloc(buf_width * buf_height, sizeof(unsigned char));
+
+        int ch = 0;
+        float xpos = 2.0f;
+
+        float scale = stbtt_ScaleForPixelHeight(&state.font.info, (int)sizes[i]);
+        int ascent;
+        stbtt_GetFontVMetrics(&state.font.info, &ascent, 0, 0);
+        int baseline = (int)(ascent * scale);
+
+        while (texts[i][ch]) {
+            int advance, lsb, x0, y0, x1, y1;
+            float x_shift = xpos - (float)floor(xpos);
+            stbtt_GetCodepointHMetrics(&font.info, texts[i][ch], &advance, &lsb);
+            stbtt_GetCodepointBitmapBoxSubpixel(&font.info, texts[i][ch], scale, scale, x_shift, 0, &x0, &y0, &x1, &y1);
+
+            // TODO don't overwrite old data
+
+            stbtt_MakeCodepointBitmapSubpixel(&font.info, &buf[((baseline + y0) * buf_width + (int)xpos + x0)], x1 - x0, y1 - y0, buf_width, scale, scale, x_shift, 0, texts[i][ch]);
+
+            xpos += (advance * scale);
+            if (texts[i][ch + 1]) {
+                xpos += scale * stbtt_GetCodepointKernAdvance(&font.info, texts[i][ch], texts[i][ch + 1]);
+            }
+            ch++;
+        }
+
+        /* printf("bbox: %d x %d\n", font.bbox_width, font.bbox_height); */
+        unsigned char *tex_buf = (unsigned char *)malloc(buf_width * buf_height * 4);
+        for (int j = 0; j < buf_width * buf_height; j++) {
+            tex_buf[j * 4 + 0] = colors[i].r;
+            tex_buf[j * 4 + 1] = colors[i].g;
+            tex_buf[j * 4 + 2] = colors[i].b;
+            tex_buf[j * 4 + 3] = buf[j];
+        }
+
+        Texture texture = app_load_texture(tex_buf, buf_width, buf_height);
+
+        free(buf);
+        free(tex_buf);
+
+        Rect src_rect = {0, 0, (float)buf_width, (float)buf_height};
+        Rect dest_rect = {positions[i].x, positions[i].y, (float)buf_width, (float)buf_height};
+        app_draw_rotated_textures(texture, &src_rect, &dest_rect, &(origins[i]), &(rotations[i]), 1);
+    }
+}
+
+void app_draw_text(const char *text, Point pos, float size, Color color) {
+    Point origin = {0.0f, 0.0f};
+    float rotation = 0.0f;
+    app_draw_rotated_text(&text, &pos, &size, &color, &origin, &rotation, 1);
 }

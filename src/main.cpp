@@ -19,6 +19,8 @@ int main(int argc, char **argv) {
 
     float rotation = 0.0f;
 
+    app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf");
+
     while (!app.should_quit) {
         app_update(&app);
 
@@ -36,6 +38,10 @@ int main(int argc, char **argv) {
         app_draw_rotated_rects(&rect, &foreground, &origin, &rotation, 1);
 
         app_draw_texture(texture, srcrect, destrect);
+
+
+        app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground);
+        app_draw_text("Heljo, World!", (Point){50.0f, 200.0f}, 50.0f, foreground);
 
         app_present();
     }

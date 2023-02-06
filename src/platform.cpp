@@ -7,6 +7,20 @@
 
 #include <stdio.h>
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
+#include "stb_rect_pack.h"
+#include "stb_truetype.h"
+
+struct Font {
+    stbtt_fontinfo info;
+    unsigned char *buf;
+    long buflen;
+    /* int bbox_width; */
+    /* int bbox_height; */
+};
+
 struct State {
     float window_width;
     float window_height;
@@ -16,11 +30,13 @@ struct State {
     GLuint tri_program_id;
     GLuint texture_program_id;
     /* GLuint basic_program_id; */
+
+    Font font;
 };
 
 static State state = {0};
 
-#include "shapes.cpp"
+#include "drawing.cpp"
 #include "shaders.cpp"
 
 void GLAPIENTRY gl_error_callback(
@@ -136,6 +152,8 @@ void app_update(App *s) {
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
                     s->window.x = (float)e.window.data1;
                     s->window.y = (float)e.window.data2;
+                    state.window_width = (float)e.window.data1;
+                    state.window_height = (float)e.window.data2;
                     glViewport(0, 0, e.window.data1, e.window.data2);
                 }
                 break;
@@ -178,4 +196,19 @@ void app_update(App *s) {
                 break;
         }
     }
+}
+
+uint8_t *read_file(const char *filename, long *out_len) {
+    FILE *f;
+    uint8_t *buf;
+
+    f = fopen(filename, "rb");
+    fseek(f, 0, SEEK_END);
+    *out_len = ftell(f);
+    rewind(f);
+
+    buf = (uint8_t*)malloc(*out_len * sizeof(uint8_t));
+    fread(buf, *out_len, 1, f);
+    fclose(f);
+    return buf;
 }

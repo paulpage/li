@@ -1,7 +1,7 @@
 all: main stitch parse mesh_loader
 
 SRC=src/main.cpp src/platform.cpp src/gl.cpp
-FAKESRC=src/shapes.cpp src/shaders.cpp
+FAKESRC=src/drawing.cpp src/shaders.cpp
 
 # main: src/main.c
 # 	${CC} src/main.c -g -o main -Ilib -lm -lraylib

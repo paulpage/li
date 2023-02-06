@@ -62,7 +62,15 @@ void app_draw_texture(Texture texture, Rect src_rect, Rect dest_rect);
 Texture app_load_texture(unsigned char *data, int width, int height);
 Texture app_load_texture_from_file(const char *filename);
 
+
+
+void app_load_font(const char *filename);
+void app_draw_rotated_text(const char *texts, Point positions, float sizes, Color colors, Point *origins, float *rotations, int count);
+void app_draw_text(const char *text, Point pos, float size, Color color);
+
 GLuint gl_create_shader(GLenum type, const GLchar *src);
 GLuint gl_create_program(const char *vert_src, const char *frag_src);
+
+uint8_t *read_file(const char *filename, long *out_len);
 
 #endif // _PLATFORM_H

@@ -73,4 +73,7 @@ GLuint gl_create_program(const char *vert_src, const char *frag_src);
 
 uint8_t *read_file(const char *filename, long *out_len);
 
+uint64_t app_get_performance_counter();
+uint64_t app_get_performance_frequency();
+
 #endif // _PLATFORM_H

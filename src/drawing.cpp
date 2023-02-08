@@ -1,5 +1,7 @@
 // Utils ------------------------------------------------------------
 
+#include <string.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -140,22 +142,46 @@ void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint index_data[
 }
 
 void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *rotations, int count) {
+
     float v[8];
+
+    float *vertex_data = (float*)malloc(sizeof(float) * count * 24);
+    GLuint *index_data = (GLuint*)malloc(sizeof(GLuint) * count * 6);
+
+    memset(vertex_data, 0, sizeof(float) * count * 24);
+    memset(index_data, 0, sizeof(GLuint) * count * 6);
+
     for (int i = 0; i < count; i++) {
         float r = (float)colors[i].r / 255.0f;
         float g = (float)colors[i].g / 255.0f;
         float b = (float)colors[i].b / 255.0f;
         float a = (float)colors[i].a / 255.0f;
         get_rect_vertices(rects[i], origins[i], rotations[i], v);
-        GLfloat vertex_data[24] = {
+        GLfloat vv[24] = {
             v[0], v[1], r, g, b, a,
             v[2], v[3], r, g, b, a,
             v[4], v[5], r, g, b, a,
             v[6], v[7], r, g, b, a,
         };
-        GLuint index_data[] = { 0, 1, 2, 1, 2, 3 };
-        gl_draw_triangles(vertex_data, index_data, 4, 2);
+        GLuint ii[] = {
+            (GLuint)(0 + i * 4),
+            (GLuint)(1 + i * 4),
+            (GLuint)(2 + i * 4),
+            (GLuint)(1 + i * 4),
+            (GLuint)(2 + i * 4),
+            (GLuint)(3 + i * 4),
+        };
+        for (int j = 0; j < 24; j++) {
+            vertex_data[i * 24 + j] = vv[j];
+        }
+        for (int j = 0; j < 6; j++) {
+            index_data[i * 6 + j] = ii[j];
+        }
     }
+    gl_draw_triangles(vertex_data, index_data, 4 * count, 2 * count);
+
+    free(vertex_data);
+    free(index_data);
 }
 
 void app_draw_rect(Rect rect, Color color) {

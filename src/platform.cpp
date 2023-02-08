@@ -212,3 +212,11 @@ uint8_t *read_file(const char *filename, long *out_len) {
     fclose(f);
     return buf;
 }
+
+uint64_t app_get_performance_counter() {
+    return SDL_GetPerformanceCounter();
+}
+
+uint64_t app_get_performance_frequency() {
+    return SDL_GetPerformanceFrequency();
+}

@@ -7,28 +7,28 @@
 #include <GL/glu.h>
 #include "SDL_opengl.h"
 
-struct Rect {
+typedef struct Rect {
     float x, y, width, height;
-};
+} Rect;
 
-struct Point {
+typedef struct Point {
     float x, y;
-};
+} Point;
 
-struct Color {
+typedef struct Color {
     uint8_t r;
     uint8_t g;
     uint8_t b;
     uint8_t a;
-};
+} Color;
 
-struct Texture {
+typedef struct Texture {
     float width;
     float height;
     uint32_t id;
-};
+} Texture;
 
-struct App {
+typedef struct App {
 
     Point window;
 
@@ -43,7 +43,7 @@ struct App {
 
     bool should_quit;
 
-};
+} App;
 
 bool app_init(const char *title, int window_width, int window_height);
 void app_quit();

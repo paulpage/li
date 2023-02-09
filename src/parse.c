@@ -14,27 +14,27 @@
 
 #define PSTR_SIZE 1024
 
-struct PathString {
+typedef struct PathString {
     int len;
     char data[PSTR_SIZE];
-};
+} PathString;
 
-enum EntryType {
+typedef enum EntryType {
     ENTRY_DIR,
     ENTRY_FILE,
-};
+} EntryType;
 
-struct Entry {
+typedef struct Entry {
     EntryType type;
     uint32_t len;
     uint32_t offset;
     uint32_t name_offset;
-};
+} Entry;
 
-struct Pack {
+typedef struct Pack {
     char bod[255];
     char bob[255];
-};
+} Pack;
 
 uint32_t get_u32(const uint8_t *data, int i) {
     uint32_t val = (data[i])

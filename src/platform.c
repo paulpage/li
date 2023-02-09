@@ -13,15 +13,15 @@
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
 
-struct Font {
+typedef struct Font {
     stbtt_fontinfo info;
     unsigned char *buf;
     long buflen;
     /* int bbox_width; */
     /* int bbox_height; */
-};
+} Font;
 
-struct State {
+typedef struct State {
     float window_width;
     float window_height;
 
@@ -32,12 +32,12 @@ struct State {
     /* GLuint basic_program_id; */
 
     Font font;
-};
+} State;
 
 static State state = {0};
 
-#include "drawing.cpp"
-#include "shaders.cpp"
+#include "drawing.c"
+#include "shaders.c"
 
 void GLAPIENTRY gl_error_callback(
     GLenum source,

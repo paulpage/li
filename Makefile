@@ -7,16 +7,16 @@ FAKESRC=src/drawing.c src/shaders.c
 # 	${CC} src/main.c -g -o main -Ilib -lm -lraylib
 
 main: ${SRC} ${FAKESRC}
-	g++ ${SRC} -g -o main -Ilib `pkg-config sdl2 glew --cflags --libs`
+	${CC} ${SRC} -g -o main -Ilib -lm `pkg-config sdl2 glew --cflags --libs`
 
 stitch: src/stitch.c
 	${CC} src/stitch.c -g -o stitch -Ilib -lm
 
 parse:  src/parse.c
-	g++ src/parse.c -g -o parse -Ilib
+	${CC} src/parse.c -g -o parse -Ilib
 
 mesh_loader: src/mesh_loader.c
-	g++ src/mesh_loader.c -g -o parse -Ilib
+	${CC} src/mesh_loader.c -g -o parse -Ilib
 
 clean:
 	rm -f main stitch parse mesh_loader

@@ -10,8 +10,6 @@
 // ls
 #include <dirent.h>
 
-#include <iostream>
-
 #define PSTR_SIZE 1024
 
 typedef struct PathString {
@@ -258,8 +256,6 @@ int main(int argc, char **argv) {
         printf("%s\n", pack_list[i].bod);
         process_pack(pack_list[i]);
     }
-
-    std::cout << "Hello" << std::endl;
 
     return 0;
 }

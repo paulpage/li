@@ -5,15 +5,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-float gl_x(float x) {
+static float gl_x(float x) {
     return -1.0f + 2.0f * x / state.window_width;
 }
 
-float gl_y(float y) {
+static float gl_y(float y) {
     return 1.0f - 2.0f * y / state.window_height;
 }
 
-void get_rect_vertices(Rect rect, Point origin, float rotation, float out[8]) {
+static void get_rect_vertices(Rect rect, Point origin, float rotation, float out[8]) {
     float x = rect.x;
     float y = rect.y;
     float width = rect.width;
@@ -50,7 +50,7 @@ void get_rect_vertices(Rect rect, Point origin, float rotation, float out[8]) {
 
 // Shapes ------------------------------------------------------------
 
-void gl_draw_triangles(GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+static void gl_draw_triangles(GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
     GLuint vbo = 0, vao = 0, ibo = 0;
     GLint vertex_pos_location = -1, vertex_color_location = -1;
     glGenBuffers(1, &vbo);
@@ -86,7 +86,7 @@ void gl_draw_triangles(GLfloat vertex_data[], GLuint index_data[], int vertex_co
     glUseProgram(0);
 }
 
-void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
     GLuint vbo = 0, vao = 0, ibo = 0;
     GLint vertex_pos_location = -1, tex_coords_location = -1;
     
@@ -244,7 +244,7 @@ Texture app_load_texture_from_file(const char *filename) {
 }
 
 void app_load_font(const char *filename) {
-    state.font = {0};
+    state.font = (Font){0};
     state.font.buf = read_file(filename, &state.font.buflen);
     stbtt_InitFont(&state.font.info, state.font.buf, 0);
     int x0, y0, x1, y1;

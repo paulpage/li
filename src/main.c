@@ -25,9 +25,9 @@ int randint(int start, int stop) {
 
 void init_rects() {
     for (int i = 0; i < RECT_COUNT; i++) {
-        rects[i] = {frand() * 800.0f, frand() * 800.0f, frand() * 50.0f, frand() * 50.0f};
-        colors[i] = {rand() % 255, rand() % 255, rand() % 255, 255};
-        origins[i] = {rects[i].width / 2.0f, rects[i].height / 2.0f};
+        rects[i] = (Rect){frand() * 800.0f, frand() * 800.0f, frand() * 50.0f, frand() * 50.0f};
+        colors[i] = (Color){rand() % 255, rand() % 255, rand() % 255, 255};
+        origins[i] = (Point){rects[i].width / 2.0f, rects[i].height / 2.0f};
         rotations[i] = frand() * 10.0f;
     }
 }

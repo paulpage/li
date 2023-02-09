@@ -1,6 +1,7 @@
 #ifndef _PLATFORM_H
 #define _PLATFORM_H
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "SDL.h"
 #include <GL/glew.h>
@@ -65,7 +66,7 @@ Texture app_load_texture_from_file(const char *filename);
 
 
 void app_load_font(const char *filename);
-void app_draw_rotated_text(const char *texts, Point positions, float sizes, Color colors, Point *origins, float *rotations, int count);
+void app_draw_rotated_text(const char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count);
 void app_draw_text(const char *text, Point pos, float size, Color color);
 
 GLuint gl_create_shader(GLenum type, const GLchar *src);

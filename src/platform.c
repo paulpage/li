@@ -1,14 +1,13 @@
 #include "platform.h"
 
-#include "SDL_opengl.h"
-
-#include <GL/glew.h>
-#include <GL/glu.h>
+#define GLAD_GL_IMPLEMENTATION
+#include "glad/gl.h"
 
 #include <stdio.h>
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
+#define STBRP_STATIC
 #define STBTT_STATIC
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
@@ -82,12 +81,8 @@ bool app_init(const char *title, int window_width, int window_height) {
         printf("Error creating OpenGL context: %s\n", SDL_GetError());
         return false;
     }
-    glewExperimental = GL_TRUE; 
-    GLenum glewError = glewInit();
-    if (glewError != GLEW_OK) {
-        printf("Error initializing GLEW: %s\n", glewGetErrorString(glewError));
-        return false;
-    }
+
+    gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
 
     if (SDL_GL_SetSwapInterval(1) < 0) {
         printf("Warning: Unable to set VSync: %s\n", SDL_GetError());

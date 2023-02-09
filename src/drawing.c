@@ -3,6 +3,7 @@
 #include <string.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
 #include "stb_image.h"
 
 static float gl_x(float x) {

@@ -3,9 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "glad/gl.h"
 #include "SDL.h"
-#include <GL/glew.h>
-#include <GL/glu.h>
 #include "SDL_opengl.h"
 
 typedef struct Rect {

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #define STB_SPRINTF_IMPLEMENTATION
+#define STB_SPRINTF_STATIC
 #include "stb_sprintf.h"
 
 #include "platform.h"
@@ -15,15 +16,15 @@ Color colors[RECT_COUNT] = {0};
 Point origins[RECT_COUNT] = {0.0f};
 float rotations[RECT_COUNT] = {0.0f};
 
-float frand() {
+static float frand() {
     return (float)rand() / (float)RAND_MAX;
 }
 
-int randint(int start, int stop) {
+static int randint(int start, int stop) {
     return rand() % (stop - start + 1) + start;
 }
 
-void init_rects() {
+static void init_rects() {
     for (int i = 0; i < RECT_COUNT; i++) {
         rects[i] = (Rect){frand() * 800.0f, frand() * 800.0f, frand() * 50.0f, frand() * 50.0f};
         colors[i] = (Color){rand() % 255, rand() % 255, rand() % 255, 255};

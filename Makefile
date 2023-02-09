@@ -7,7 +7,7 @@ FAKESRC=src/drawing.c src/shaders.c
 # 	${CC} src/main.c -g -o main -Ilib -lm -lraylib
 
 main: ${SRC} ${FAKESRC}
-	${CC} ${SRC} -g -o main -Ilib -lm `pkg-config sdl2 glew --cflags --libs`
+	${CC} ${SRC} -g -o main -Ilib -lm `pkg-config sdl2 --cflags --libs`
 
 stitch: src/stitch.c
 	${CC} src/stitch.c -g -o stitch -Ilib -lm

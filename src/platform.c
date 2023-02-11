@@ -35,6 +35,7 @@ typedef struct State {
 
 static State state = {0};
 
+#include "gl.c"
 #include "drawing.c"
 #include "shaders.c"
 

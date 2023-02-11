@@ -1,5 +1,3 @@
-#include "platform.h"
-
 #include <stdio.h>
 
 GLuint gl_create_shader(GLenum type, const GLchar *src) {

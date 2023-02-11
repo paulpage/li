@@ -6,6 +6,21 @@
 #define STB_IMAGE_STATIC
 #include "stb_image.h"
 
+typedef struct GlVertex {
+    Point position;
+    Color color;
+} GlVertex;
+
+typedef struct DrawState {
+    int last_rect_count;
+    GlVertex *tri_vertex_data;
+    GLuint *tri_index_data;
+    GLuint tri_vao;
+    GLuint tri_vbo;
+    GLuint tri_ibo;
+} DrawState;
+static DrawState draw_state = {0};
+
 static float gl_x(float x) {
     return -1.0f + 2.0f * x / state.window_width;
 }
@@ -51,40 +66,55 @@ static void get_rect_vertices(Rect rect, Point origin, float rotation, float out
 
 // Shapes ------------------------------------------------------------
 
-static void gl_draw_triangles(GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
-    GLuint vbo = 0, vao = 0, ibo = 0;
-    GLint vertex_pos_location = -1, vertex_color_location = -1;
+static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+
+    if (!draw_state.tri_vao) {
+        glGenVertexArrays(1, &draw_state.tri_vao);
+    }
+
+    GLuint vbo = 0, ibo = 0;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, 6 * vertex_count * sizeof(GLfloat), vertex_data, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(GlVertex), vertex_data, GL_DYNAMIC_DRAW);
 
-    glGenVertexArrays(1, &vao);
+    /* glGenVertexArrays(1, &vao); */
 
     glGenBuffers(1, &ibo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_DYNAMIC_DRAW);
 
+    GLint vertex_pos_location = -1, vertex_color_location = -1;
     vertex_pos_location = glGetAttribLocation(state.tri_program_id, "position");
     vertex_color_location = glGetAttribLocation(state.tri_program_id, "color");
     if (vertex_pos_location == -1 || vertex_color_location == -1) {
         return;
     }
 
-    glBindVertexArray(vao);
+    glBindVertexArray(draw_state.tri_vao);
     glUseProgram(state.tri_program_id);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
     glEnableVertexAttribArray(vertex_pos_location);
-    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL);
+    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlVertex), 0);
     glEnableVertexAttribArray(vertex_color_location);
-    glVertexAttribPointer(vertex_color_location, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+    glVertexAttribPointer(vertex_color_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GlVertex), (void*)(2 * sizeof(float)));
+
+    /* glEnableVertexAttribArray(vertex_pos_location); */
+    /* glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL); */
+    /* glEnableVertexAttribArray(vertex_color_location); */
+    /* glVertexAttribPointer(vertex_color_location, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat))); */
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
 
-    glBindVertexArray(0);
-    glDeleteVertexArrays(1, &vao);
-
     glDisableVertexAttribArray(vertex_pos_location);
+    glDisableVertexAttribArray(vertex_color_location);
     glUseProgram(0);
+
+    glBindVertexArray(0);
+    /* glDeleteVertexArrays(1, &vao); */
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ibo);
 }
 
 static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
@@ -136,53 +166,62 @@ static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint inde
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
 
     glBindVertexArray(0);
-    glDeleteVertexArrays(1, &vao);
     glDisableVertexAttribArray(vertex_pos_location);
     glDisableVertexAttribArray(tex_coords_location);
     glUseProgram(0);
+
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ibo);
 }
 
 void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *rotations, int count) {
 
     float v[8];
 
-    float *vertex_data = (float*)malloc(sizeof(float) * count * 24);
-    GLuint *index_data = (GLuint*)malloc(sizeof(GLuint) * count * 6);
+    if (count != draw_state.last_rect_count) {
+        if (draw_state.tri_vertex_data) {
+            printf("FREE VERTEX\n");
+            free(draw_state.tri_vertex_data);
+            draw_state.tri_vertex_data = 0;
+        }
+        if (draw_state.tri_index_data) {
+            printf("FREE INDEX\n");
+            free(draw_state.tri_index_data);
+            draw_state.tri_index_data = 0;
+        }
+        printf("MALLOC\n");
+        draw_state.tri_vertex_data = malloc(sizeof(GlVertex) * count * 4);
+        draw_state.tri_index_data = (GLuint*)malloc(sizeof(GLuint) * count * 6);
+    }
+    draw_state.last_rect_count = count;
 
-    memset(vertex_data, 0, sizeof(float) * count * 24);
-    memset(index_data, 0, sizeof(GLuint) * count * 6);
+    memset(draw_state.tri_vertex_data, 0, sizeof(GlVertex) * count * 4);
+    memset(draw_state.tri_index_data, 0, sizeof(GLuint) * count * 6);
 
     for (int i = 0; i < count; i++) {
-        float r = (float)colors[i].r / 255.0f;
-        float g = (float)colors[i].g / 255.0f;
-        float b = (float)colors[i].b / 255.0f;
-        float a = (float)colors[i].a / 255.0f;
-        get_rect_vertices(rects[i], origins[i], rotations[i], v);
-        GLfloat vv[24] = {
-            v[0], v[1], r, g, b, a,
-            v[2], v[3], r, g, b, a,
-            v[4], v[5], r, g, b, a,
-            v[6], v[7], r, g, b, a,
-        };
-        GLuint ii[] = {
-            (GLuint)(0 + i * 4),
-            (GLuint)(1 + i * 4),
-            (GLuint)(2 + i * 4),
-            (GLuint)(1 + i * 4),
-            (GLuint)(2 + i * 4),
-            (GLuint)(3 + i * 4),
-        };
-        for (int j = 0; j < 24; j++) {
-            vertex_data[i * 24 + j] = vv[j];
-        }
-        for (int j = 0; j < 6; j++) {
-            index_data[i * 6 + j] = ii[j];
-        }
-    }
-    gl_draw_triangles(vertex_data, index_data, 4 * count, 2 * count);
 
-    free(vertex_data);
-    free(index_data);
+        get_rect_vertices(rects[i], origins[i], rotations[i], v);
+
+        for (int j = 0; j < 4; j++) {
+            int jj = i * 4 + j;
+            draw_state.tri_vertex_data[jj].position.x = v[j * 2 + 0];
+            draw_state.tri_vertex_data[jj].position.y = v[j * 2 + 1];
+            draw_state.tri_vertex_data[jj].color = colors[i];
+            /* draw_state.tri_vertex_data[jj].color[1] = colors[i].g; */
+            /* draw_state.tri_vertex_data[jj].color[2] = colors[i].b; */
+            /* draw_state.tri_vertex_data[jj].color[3] = colors[i].a; */
+        }
+
+        int ii = i * 6;
+        draw_state.tri_index_data[ii + 0] = 0 + i * 4;
+        draw_state.tri_index_data[ii + 1] = 1 + i * 4;
+        draw_state.tri_index_data[ii + 2] = 2 + i * 4;
+        draw_state.tri_index_data[ii + 3] = 1 + i * 4;
+        draw_state.tri_index_data[ii + 4] = 2 + i * 4;
+        draw_state.tri_index_data[ii + 5] = 3 + i * 4;
+    }
+    gl_draw_triangles(draw_state.tri_vertex_data, draw_state.tri_index_data, 4 * count, 2 * count);
 }
 
 void app_draw_rect(Rect rect, Color color) {

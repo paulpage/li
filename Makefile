@@ -6,6 +6,10 @@ FAKESRC=src/drawing.c src/shaders.c
 # main: src/main.c
 # 	${CC} src/main.c -g -o main -Ilib -lm -lraylib
 
+release: ${SRC} ${FAKESRC}
+	${CC} ${SRC} -o release-main -Ilib -lm -O2 `pkg-config sdl2 --cflags --libs`
+
+
 main: ${SRC} ${FAKESRC}
 	${CC} ${SRC} -g -o main -Ilib -lm `pkg-config sdl2 --cflags --libs`
 

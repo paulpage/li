@@ -9,7 +9,7 @@
 
 #include "platform.h"
 
-#define RECT_COUNT 1000000
+#define RECT_COUNT 100000
 
 Rect rects[RECT_COUNT] = {0};
 Color colors[RECT_COUNT] = {0};
@@ -66,6 +66,8 @@ int main(int argc, char **argv) {
         char s[64] = {0};
         stbsp_snprintf(s, 64, "frame time: %.4f ms", elapsed);
 
+        printf("frame time: %.4f ms\n", elapsed);
+
         start = app_get_performance_counter();
 
         app_update(&app);
@@ -89,13 +91,13 @@ int main(int argc, char **argv) {
 
         app_draw_rotated_rects(rects, colors, origins, rotations, RECT_COUNT);
 
-        app_draw_texture(texture, srcrect, destrect);
+        /* app_draw_texture(texture, srcrect, destrect); */
 
 
-        app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground);
-        app_draw_text("Heljo, World!", (Point){50.0f, 400.0f}, 50.0f, foreground);
+        /* app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground); */
+        /* app_draw_text("Heljo, World!", (Point){50.0f, 400.0f}, 50.0f, foreground); */
 
-        app_draw_text(s, (Point){100.0f, 200.0f}, 50.0f, foreground);
+        /* app_draw_text(s, (Point){100.0f, 200.0f}, 50.0f, foreground); */
 
         app_present();
 

@@ -1,11 +1,12 @@
 const GLchar* TRI_VERT_SRC =
     "#version 330 core\n"
+    "uniform vec2 screen;\n"
     "in vec2 position;\n"
     "in vec4 color;\n"
     "out vec4 v_color;\n"
     "void main() {\n"
     "  v_color = color;\n"
-    "  gl_Position = vec4(position.x, position.y, 0, 1);\n"
+    "  gl_Position = vec4(-1 + 2 * position.x / screen.x, 1 - 2 * position.y / screen.y, 0, 1);\n"
     "}\n";
 
 const GLchar *TRI_FRAG_SRC =

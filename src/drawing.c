@@ -29,7 +29,42 @@ static float gl_y(float y) {
     return 1.0f - 2.0f * y / state.window_height;
 }
 
-static void get_rect_vertices(Rect rect, Point origin, float rotation, float out[8]) {
+typedef struct GlRectVertices {
+    Point p1, p2, p3, p4;
+} GlRectVertices;
+
+static GlRectVertices get_new_rect_vertices(Rect rect, Point origin, float rotation) {
+    GlRectVertices out = {0};
+    if (rotation == 0.0f) {
+        float x = rect.x - origin.x;
+        float y = rect.y - origin.y;
+        out.p1.x = x;
+        out.p1.y = y;
+        out.p2.x = x + rect.width;
+        out.p2.y = y;
+        out.p3.x = x;
+        out.p3.y = y + rect.height;
+        out.p4.x = x + rect.width;
+        out.p4.y = y + rect.height;
+    } else {
+        float rcos = cosf(rotation);
+        float rsin = sinf(rotation);
+        float dx = -origin.x;
+        float dy = -origin.y;
+        out.p1.x = rect.x + dx*rcos - dy*rsin;
+        out.p1.y = rect.y + dx*rsin + dy*rcos;
+        out.p2.x = rect.x + (dx + rect.width)*rcos - dy*rsin;
+        out.p2.y = rect.y + (dx + rect.width)*rsin + dy*rcos;
+        out.p3.x = rect.x + dx*rcos - (dy + rect.height)*rsin;
+        out.p3.y = rect.y + dx*rsin + (dy + rect.height)*rcos;
+        out.p4.x = rect.x + (dx + rect.width)*rcos - (dy + rect.height)*rsin;
+        out.p4.y = rect.y + (dx + rect.width)*rsin + (dy + rect.height)*rcos;
+    }
+    return out;
+}
+
+static void get_rect_vertices(Rect rect, Point origin, float rotation, float *out) {
+
     float x = rect.x;
     float y = rect.y;
     float width = rect.width;
@@ -41,26 +76,26 @@ static void get_rect_vertices(Rect rect, Point origin, float rotation, float out
         x = x + dx;
         y = y + dy;
 
-        out[0] = gl_x(x);
-        out[1] = gl_y(y);
-        out[2] = gl_x(x + width);
-        out[3] = gl_y(y);
-        out[4] = gl_x(x);
-        out[5] = gl_y(y + height);
-        out[6] = gl_x(x + width);
-        out[7] = gl_y(y + height);
+        out[0] = x;
+        out[1] = y;
+        out[2] = x + width;
+        out[3] = y;
+        out[4] = x;
+        out[5] = y + height;
+        out[6] = x + width;
+        out[7] = y + height;
     } else {
         float rcos = cosf(rotation);
         float rsin = sinf(rotation);
 
-        out[0] = gl_x(x + dx*rcos - dy*rsin);
-        out[1] = gl_y(y + dx*rsin + dy*rcos);
-        out[2] = gl_x(x + (dx + width)*rcos - dy*rsin);
-        out[3] = gl_y(y + (dx + width)*rsin + dy*rcos);
-        out[4] = gl_x(x + dx*rcos - (dy + height)*rsin);
-        out[5] = gl_y(y + dx*rsin + (dy + height)*rcos);
-        out[6] = gl_x(x + (dx + width)*rcos - (dy + height)*rsin);
-        out[7] = gl_y(y + (dx + width)*rsin + (dy + height)*rcos);
+        out[0] = x + dx*rcos - dy*rsin;
+        out[1] = y + dx*rsin + dy*rcos;
+        out[2] = x + (dx + width)*rcos - dy*rsin;
+        out[3] = y + (dx + width)*rsin + dy*rcos;
+        out[4] = x + dx*rcos - (dy + height)*rsin;
+        out[5] = y + dx*rsin + (dy + height)*rcos;
+        out[6] = x + (dx + width)*rcos - (dy + height)*rsin;
+        out[7] = y + (dx + width)*rsin + (dy + height)*rcos;
     }
 }
 
@@ -103,6 +138,9 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
     /* glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL); */
     /* glEnableVertexAttribArray(vertex_color_location); */
     /* glVertexAttribPointer(vertex_color_location, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat))); */
+
+    GLuint uniform = glGetUniformLocation(state.tri_program_id, "screen");
+    glUniform2f(uniform, state.window_width, state.window_height);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
@@ -193,34 +231,39 @@ void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *r
         printf("MALLOC\n");
         draw_state.tri_vertex_data = malloc(sizeof(GlVertex) * count * 4);
         draw_state.tri_index_data = (GLuint*)malloc(sizeof(GLuint) * count * 6);
+
+        memset(draw_state.tri_index_data, 0, sizeof(GLuint) * count * 6);
+        for (int i = 0; i < count; i++) {
+            draw_state.tri_index_data[i * 6 + 0] = 0 + i * 4;
+            draw_state.tri_index_data[i * 6 + 1] = 1 + i * 4;
+            draw_state.tri_index_data[i * 6 + 2] = 2 + i * 4;
+            draw_state.tri_index_data[i * 6 + 3] = 1 + i * 4;
+            draw_state.tri_index_data[i * 6 + 4] = 2 + i * 4;
+            draw_state.tri_index_data[i * 6 + 5] = 3 + i * 4;
+        }
     }
     draw_state.last_rect_count = count;
 
+    uint64_t start = app_get_performance_counter();
+
     memset(draw_state.tri_vertex_data, 0, sizeof(GlVertex) * count * 4);
-    memset(draw_state.tri_index_data, 0, sizeof(GLuint) * count * 6);
-
+    GlRectVertices out;
     for (int i = 0; i < count; i++) {
-
-        get_rect_vertices(rects[i], origins[i], rotations[i], v);
-
-        for (int j = 0; j < 4; j++) {
-            int jj = i * 4 + j;
-            draw_state.tri_vertex_data[jj].position.x = v[j * 2 + 0];
-            draw_state.tri_vertex_data[jj].position.y = v[j * 2 + 1];
-            draw_state.tri_vertex_data[jj].color = colors[i];
-            /* draw_state.tri_vertex_data[jj].color[1] = colors[i].g; */
-            /* draw_state.tri_vertex_data[jj].color[2] = colors[i].b; */
-            /* draw_state.tri_vertex_data[jj].color[3] = colors[i].a; */
-        }
-
-        int ii = i * 6;
-        draw_state.tri_index_data[ii + 0] = 0 + i * 4;
-        draw_state.tri_index_data[ii + 1] = 1 + i * 4;
-        draw_state.tri_index_data[ii + 2] = 2 + i * 4;
-        draw_state.tri_index_data[ii + 3] = 1 + i * 4;
-        draw_state.tri_index_data[ii + 4] = 2 + i * 4;
-        draw_state.tri_index_data[ii + 5] = 3 + i * 4;
+        out = get_new_rect_vertices(rects[i], origins[i], rotations[i]);
+        draw_state.tri_vertex_data[i * 4 + 0].position = out.p1;
+        draw_state.tri_vertex_data[i * 4 + 0].color = colors[i];
+        draw_state.tri_vertex_data[i * 4 + 1].position = out.p2;
+        draw_state.tri_vertex_data[i * 4 + 1].color = colors[i];
+        draw_state.tri_vertex_data[i * 4 + 2].position = out.p3;
+        draw_state.tri_vertex_data[i * 4 + 2].color = colors[i];
+        draw_state.tri_vertex_data[i * 4 + 3].position = out.p4;
+        draw_state.tri_vertex_data[i * 4 + 3].color = colors[i];
     }
+
+    uint64_t end = app_get_performance_counter();
+    float elapsed = (float)(end - start) / (float)app_get_performance_frequency() * 1000.0f;
+    printf("loop time: %.4f ms\n", elapsed);
+
     gl_draw_triangles(draw_state.tri_vertex_data, draw_state.tri_index_data, 4 * count, 2 * count);
 }
 

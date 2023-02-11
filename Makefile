@@ -4,7 +4,10 @@ APP_SRC=src/main.c
 LIB_SRC=src/platform.c
 LIB_FAKESRC=src/drawing.c src/shaders.c
 
-platform: ${LIB_SRC} ${LIB_FAKESRC}
+release: ${LIB_SRC} ${LIB_FAKESRC} ${APP_SRC}
+	${CC} ${LIB_SRC} ${APP_SRC} -O2 -o release-main -Ilib -lm `pkg-config sdl2 --cflags --libs`
+
+platform.o: ${LIB_SRC} ${LIB_FAKESRC}
 	${CC} ${LIB_SRC} -c -g -Ilib -lm `pkg-config sdl2 --cflags --libs`
 
 main: platform.o ${APP_SRC}
@@ -20,6 +23,6 @@ mesh_loader: src/mesh_loader.c
 	${CC} src/mesh_loader.c -g -o mesh_loader -Ilib
 
 clean:
-	rm -f main stitch parse mesh_loader
+	rm -f main stitch parse mesh_loader platform.o
 
 .PHONY: all

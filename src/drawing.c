@@ -11,6 +11,11 @@ typedef struct GlVertex {
     Color color;
 } GlVertex;
 
+typedef struct GlTexVertex {
+    Point position;
+    Point uv;
+} GlTexVertex;
+
 typedef struct DrawState {
     int last_rect_count;
     GlVertex *tri_vertex_data;
@@ -18,6 +23,12 @@ typedef struct DrawState {
     GLuint tri_vao;
     GLuint tri_vbo;
     GLuint tri_ibo;
+    int last_texture_count;
+    GlTexVertex *tex_vertex_data;
+    GLuint *tex_index_data;
+    GLuint tex_vao;
+    GLuint tex_vbo;
+    GLuint tex_ibo;
 } DrawState;
 static DrawState draw_state = {0};
 
@@ -107,16 +118,13 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
         glGenVertexArrays(1, &draw_state.tri_vao);
     }
 
-    GLuint vbo = 0, ibo = 0;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glGenBuffers(1, &draw_state.tri_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.tri_vbo);
     glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(GlVertex), vertex_data, GL_DYNAMIC_DRAW);
 
-    /* glGenVertexArrays(1, &vao); */
-
-    glGenBuffers(1, &ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_DYNAMIC_DRAW);
+    glGenBuffers(1, &draw_state.tri_ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tri_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
 
     GLint vertex_pos_location = -1, vertex_color_location = -1;
     vertex_pos_location = glGetAttribLocation(state.tri_program_id, "position");
@@ -127,22 +135,17 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
 
     glBindVertexArray(draw_state.tri_vao);
     glUseProgram(state.tri_program_id);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.tri_vbo);
 
     glEnableVertexAttribArray(vertex_pos_location);
     glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlVertex), 0);
     glEnableVertexAttribArray(vertex_color_location);
     glVertexAttribPointer(vertex_color_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GlVertex), (void*)(2 * sizeof(float)));
 
-    /* glEnableVertexAttribArray(vertex_pos_location); */
-    /* glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL); */
-    /* glEnableVertexAttribArray(vertex_color_location); */
-    /* glVertexAttribPointer(vertex_color_location, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat))); */
-
     GLuint uniform = glGetUniformLocation(state.tri_program_id, "screen");
     glUniform2f(uniform, state.window_width, state.window_height);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tri_ibo);
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
 
     glDisableVertexAttribArray(vertex_pos_location);
@@ -150,15 +153,16 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
     glUseProgram(0);
 
     glBindVertexArray(0);
-    /* glDeleteVertexArrays(1, &vao); */
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ibo);
+    glDeleteBuffers(1, &draw_state.tri_vbo);
+    glDeleteBuffers(1, &draw_state.tri_ibo);
 }
 
-static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+static void gl_draw_textures(Texture texture, GlTexVertex vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+
+
     GLuint vbo = 0, vao = 0, ibo = 0;
     GLint vertex_pos_location = -1, tex_coords_location = -1;
-    
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.id);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -170,14 +174,16 @@ static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint inde
     /* glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); */
     /* glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); */
 
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ibo);
+    if (!draw_state.tri_vao) {
+        glGenVertexArrays(1, &draw_state.tex_vao);
+    }
+    glGenBuffers(1, &draw_state.tex_vbo);
+    glGenBuffers(1, &draw_state.tex_ibo);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, 4 * vertex_count * sizeof(GLfloat), vertex_data, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.tex_vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(GlTexVertex), vertex_data, GL_DYNAMIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tex_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
 
     vertex_pos_location = glGetAttribLocation(state.texture_program_id, "position");
@@ -186,21 +192,22 @@ static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint inde
         return;
     }
 
-    glBindVertexArray(vao);
+    glBindVertexArray(draw_state.tex_vao);
     glUseProgram(state.texture_program_id);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    int stride = 4 * sizeof(GLfloat);
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.tex_vbo);
 
     glEnableVertexAttribArray(vertex_pos_location);
-    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, stride, NULL);
+    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), NULL);
     glEnableVertexAttribArray(tex_coords_location);
-    glVertexAttribPointer(tex_coords_location, 2, GL_FLOAT, GL_FALSE, stride, (void*)(2 * sizeof(GLfloat)));
+    glVertexAttribPointer(tex_coords_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), (void*)(2 * sizeof(GLfloat)));
 
-    GLuint uniform = glGetUniformLocation(state.texture_program_id, "tex");
+    GLuint uniform_screen = glGetUniformLocation(state.texture_program_id, "screen");
+    glUniform2f(uniform_screen, state.window_width, state.window_height);
+
+    GLuint uniform_tex = glGetUniformLocation(state.texture_program_id, "tex");
     glUseProgram(state.texture_program_id);
-    glUniform1i(uniform, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glUniform1i(uniform_tex, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tex_ibo);
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
 
     glBindVertexArray(0);
@@ -208,9 +215,9 @@ static void gl_draw_textures(Texture texture, GLfloat vertex_data[], GLuint inde
     glDisableVertexAttribArray(tex_coords_location);
     glUseProgram(0);
 
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
-    glDeleteBuffers(1, &ibo);
+    glDeleteVertexArrays(1, &draw_state.tex_vao);
+    glDeleteBuffers(1, &draw_state.tex_vbo);
+    glDeleteBuffers(1, &draw_state.tex_ibo);
 }
 
 void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *rotations, int count) {
@@ -229,7 +236,7 @@ void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *r
             draw_state.tri_index_data = 0;
         }
         printf("MALLOC\n");
-        draw_state.tri_vertex_data = malloc(sizeof(GlVertex) * count * 4);
+        draw_state.tri_vertex_data = (GlVertex*)malloc(sizeof(GlVertex) * count * 4);
         draw_state.tri_index_data = (GLuint*)malloc(sizeof(GLuint) * count * 6);
 
         memset(draw_state.tri_index_data, 0, sizeof(GLuint) * count * 6);
@@ -262,7 +269,7 @@ void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *r
 
     uint64_t end = app_get_performance_counter();
     float elapsed = (float)(end - start) / (float)app_get_performance_frequency() * 1000.0f;
-    printf("loop time: %.4f ms\n", elapsed);
+    /* printf("loop time: %.4f ms\n", elapsed); */
 
     gl_draw_triangles(draw_state.tri_vertex_data, draw_state.tri_index_data, 4 * count, 2 * count);
 }
@@ -276,25 +283,72 @@ void app_draw_rect(Rect rect, Color color) {
 // Textures ------------------------------------------------------------
 
 void app_draw_rotated_textures(Texture texture, Rect *src_rects, Rect *dest_rects, Point *origins, float *rotations, int count) {
-    float xy[8];
-    for (int i = 0; i < count; i++) {
-        get_rect_vertices(dest_rects[i], origins[i], rotations[i], xy);
 
+    if (count != draw_state.last_texture_count) {
+        if (draw_state.tex_vertex_data) {
+            free(draw_state.tex_vertex_data);
+            draw_state.tex_vertex_data = 0;
+        }
+        if (draw_state.tex_index_data) {
+            free(draw_state.tex_index_data);
+            draw_state.tex_index_data = 0;
+        }
+        draw_state.tex_vertex_data = (GlTexVertex*)malloc(sizeof(GlTexVertex) * count * 4);
+        draw_state.tex_index_data = (GLuint*)malloc(sizeof(GLuint) * count * 6);
+
+        memset(draw_state.tex_index_data, 0, sizeof(GLuint) * count * 6);
+        for (int i = 0; i < count; i++) {
+            draw_state.tex_index_data[i * 6 + 0] = 0 + i * 4;
+            draw_state.tex_index_data[i * 6 + 1] = 1 + i * 4;
+            draw_state.tex_index_data[i * 6 + 2] = 2 + i * 4;
+            draw_state.tex_index_data[i * 6 + 3] = 1 + i * 4;
+            draw_state.tex_index_data[i * 6 + 4] = 2 + i * 4;
+            draw_state.tex_index_data[i * 6 + 5] = 3 + i * 4;
+        }
+    }
+
+    draw_state.last_texture_count = count;
+
+    memset(draw_state.tex_vertex_data, 0, sizeof(GlVertex) * count * 4);
+    GlRectVertices out;
+    for (int i = 0; i < count; i++) {
+        out = get_new_rect_vertices(dest_rects[i], origins[i], rotations[i]);
         float u0 = src_rects[i].x / texture.width;
         float u1 = (src_rects[i].x + src_rects[i].width) / texture.width;
         float v0 = src_rects[i].y / texture.height;
         float v1 = (src_rects[i].y + src_rects[i].height) / texture.height;
 
-        GLfloat vertex_data[16] = {
-            xy[0], xy[1], u0, v0,
-            xy[2], xy[3], u1, v0,
-            xy[4], xy[5], u0, v1,
-            xy[6], xy[7], u1, v1,
-        };
-        GLuint index_data[] = { 0, 1, 2, 1, 2, 3 };
-        gl_draw_textures(texture, vertex_data, index_data, 4, 2);
-        // TODO
+        draw_state.tex_vertex_data[i * 4 + 0].position = out.p1;
+        draw_state.tex_vertex_data[i * 4 + 0].uv = (Point){u0, v0};
+        draw_state.tex_vertex_data[i * 4 + 1].position = out.p2;
+        draw_state.tex_vertex_data[i * 4 + 1].uv = (Point){u1, v0};
+        draw_state.tex_vertex_data[i * 4 + 2].position = out.p3;
+        draw_state.tex_vertex_data[i * 4 + 2].uv = (Point){u0, v1};
+        draw_state.tex_vertex_data[i * 4 + 3].position = out.p4;
+        draw_state.tex_vertex_data[i * 4 + 3].uv = (Point){u1, v1};
     }
+
+    gl_draw_textures(texture, draw_state.tex_vertex_data, draw_state.tex_index_data, 4 * count, 2 * count);
+
+    /* float xy[8]; */
+    /* for (int i = 0; i < count; i++) { */
+    /*     get_rect_vertices(dest_rects[i], origins[i], rotations[i], xy); */
+
+    /*     float u0 = src_rects[i].x / texture.width; */
+    /*     float u1 = (src_rects[i].x + src_rects[i].width) / texture.width; */
+    /*     float v0 = src_rects[i].y / texture.height; */
+    /*     float v1 = (src_rects[i].y + src_rects[i].height) / texture.height; */
+
+    /*     GLfloat vertex_data[16] = { */
+    /*         xy[0], xy[1], u0, v0, */
+    /*         xy[2], xy[3], u1, v0, */
+    /*         xy[4], xy[5], u0, v1, */
+    /*         xy[6], xy[7], u1, v1, */
+    /*     }; */
+    /*     GLuint index_data[] = { 0, 1, 2, 1, 2, 3 }; */
+    /*     gl_draw_textures(texture, vertex_data, index_data, 4, 2); */
+    /*     // TODO */
+    /* } */
 }
 
 void app_draw_texture(Texture texture, Rect src_rect, Rect dest_rect) {

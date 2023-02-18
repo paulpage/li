@@ -29,6 +29,17 @@ typedef struct DrawState {
     GLuint tex_vao;
     GLuint tex_vbo;
     GLuint tex_ibo;
+    stbtt_pack_context font_pack_ctx;
+    stbtt_packedchar *font_packed_chars;
+    GLuint font_texture_id;
+    int last_text_count;
+    GlTexVertex *text_vertex_data;
+    Color *text_color_data;
+    int *text_index_data;
+    GLuint font_vao;
+    GLuint font_vert_vbo;
+    GLuint font_color_vbo;
+    GLuint font_ibo;
 } DrawState;
 static DrawState draw_state = {0};
 
@@ -126,10 +137,10 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tri_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
 
-    GLint vertex_pos_location = -1, vertex_color_location = -1;
-    vertex_pos_location = glGetAttribLocation(state.tri_program_id, "position");
-    vertex_color_location = glGetAttribLocation(state.tri_program_id, "color");
-    if (vertex_pos_location == -1 || vertex_color_location == -1) {
+    GLint position_location = -1, color_location = -1;
+    position_location = glGetAttribLocation(state.tri_program_id, "position");
+    color_location = glGetAttribLocation(state.tri_program_id, "color");
+    if (position_location == -1 || color_location == -1) {
         return;
     }
 
@@ -137,19 +148,19 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
     glUseProgram(state.tri_program_id);
     glBindBuffer(GL_ARRAY_BUFFER, draw_state.tri_vbo);
 
-    glEnableVertexAttribArray(vertex_pos_location);
-    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlVertex), 0);
-    glEnableVertexAttribArray(vertex_color_location);
-    glVertexAttribPointer(vertex_color_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GlVertex), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(position_location);
+    glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlVertex), 0);
+    glEnableVertexAttribArray(color_location);
+    glVertexAttribPointer(color_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GlVertex), (void*)(2 * sizeof(float)));
 
-    GLuint uniform = glGetUniformLocation(state.tri_program_id, "screen");
+    GLint uniform = glGetUniformLocation(state.tri_program_id, "screen");
     glUniform2f(uniform, state.window_width, state.window_height);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tri_ibo);
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
 
-    glDisableVertexAttribArray(vertex_pos_location);
-    glDisableVertexAttribArray(vertex_color_location);
+    glDisableVertexAttribArray(position_location);
+    glDisableVertexAttribArray(color_location);
     glUseProgram(0);
 
     glBindVertexArray(0);
@@ -159,20 +170,12 @@ static void gl_draw_triangles(GlVertex vertex_data[], GLuint index_data[], int v
 
 static void gl_draw_textures(Texture texture, GlTexVertex vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
 
-
-    GLuint vbo = 0, vao = 0, ibo = 0;
-    GLint vertex_pos_location = -1, tex_coords_location = -1;
+    GLint position_location = -1, tex_coords_location = -1;
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.id);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
-
-    // TODO move these to texture load?
-    /* glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); */
-    /* glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); */
-    /* glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); */
-    /* glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); */
 
     if (!draw_state.tri_vao) {
         glGenVertexArrays(1, &draw_state.tex_vao);
@@ -186,9 +189,9 @@ static void gl_draw_textures(Texture texture, GlTexVertex vertex_data[], GLuint 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tex_ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
 
-    vertex_pos_location = glGetAttribLocation(state.texture_program_id, "position");
+    position_location = glGetAttribLocation(state.texture_program_id, "position");
     tex_coords_location = glGetAttribLocation(state.texture_program_id, "tex_coords");
-    if (vertex_pos_location == -1 || tex_coords_location == -1) {
+    if (position_location == -1 || tex_coords_location == -1) {
         return;
     }
 
@@ -196,26 +199,25 @@ static void gl_draw_textures(Texture texture, GlTexVertex vertex_data[], GLuint 
     glUseProgram(state.texture_program_id);
     glBindBuffer(GL_ARRAY_BUFFER, draw_state.tex_vbo);
 
-    glEnableVertexAttribArray(vertex_pos_location);
-    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), NULL);
+    glEnableVertexAttribArray(position_location);
+    glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), NULL);
     glEnableVertexAttribArray(tex_coords_location);
     glVertexAttribPointer(tex_coords_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), (void*)(2 * sizeof(GLfloat)));
 
-    GLuint uniform_screen = glGetUniformLocation(state.texture_program_id, "screen");
+    GLint uniform_screen = glGetUniformLocation(state.texture_program_id, "screen");
     glUniform2f(uniform_screen, state.window_width, state.window_height);
 
-    GLuint uniform_tex = glGetUniformLocation(state.texture_program_id, "tex");
+    GLint uniform_tex = glGetUniformLocation(state.texture_program_id, "tex");
     glUseProgram(state.texture_program_id);
     glUniform1i(uniform_tex, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.tex_ibo);
     glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
 
     glBindVertexArray(0);
-    glDisableVertexAttribArray(vertex_pos_location);
+    glDisableVertexAttribArray(position_location);
     glDisableVertexAttribArray(tex_coords_location);
     glUseProgram(0);
 
-    glDeleteVertexArrays(1, &draw_state.tex_vao);
     glDeleteBuffers(1, &draw_state.tex_vbo);
     glDeleteBuffers(1, &draw_state.tex_ibo);
 }
@@ -309,7 +311,7 @@ void app_draw_rotated_textures(Texture texture, Rect *src_rects, Rect *dest_rect
 
     draw_state.last_texture_count = count;
 
-    memset(draw_state.tex_vertex_data, 0, sizeof(GlVertex) * count * 4);
+    memset(draw_state.tex_vertex_data, 0, sizeof(GlTexVertex) * count * 4);
     GlRectVertices out;
     for (int i = 0; i < count; i++) {
         out = get_new_rect_vertices(dest_rects[i], origins[i], rotations[i]);
@@ -388,66 +390,219 @@ void app_load_font(const char *filename) {
     /* stbtt_GetFontBoundingBox(&state.font.info, &x0, &y0, &x1, &y1); */
     /* state.font.bbox_width = x1 - x0; */
     /* state.font.bbox_height = y1 - y0; */
+
+    unsigned char *temp_bitmap = malloc(512 * 512);
+   stbtt_PackBegin(&draw_state.font_pack_ctx, temp_bitmap, 512, 512, 0, 1, NULL);
+    // TODO properly handle font sizes, and get it from stbtt_ScaleForPixelHeight to pass into this function
+    draw_state.font_packed_chars = malloc(sizeof(stbtt_packedchar) * 256-32);
+    stbtt_PackFontRange(&draw_state.font_pack_ctx, state.font.buf, 0, 40.0f, 32, 256-32, draw_state.font_packed_chars);
+    glGenTextures(1, &draw_state.font_texture_id);
+    glBindTexture(GL_TEXTURE_2D, draw_state.font_texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512, 512, 0, GL_RED, GL_UNSIGNED_BYTE, temp_bitmap);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
 
-void app_draw_rotated_text(const char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count) {
+void gl_draw_text(GLuint texture, GlTexVertex vertex_data[], GLuint index_data[], Color color_data[], int vertex_count, int triangle_count) {
 
-    Font font = state.font;
+    GLint position_location = glGetAttribLocation(state.text_program_id, "position");
+    GLint tex_coords_location = glGetAttribLocation(state.text_program_id, "tex_coords");
+    GLint color_location = glGetAttribLocation(state.text_program_id, "color");
+    if (position_location == -1 || tex_coords_location == -1 || color_location == -1) {
+        return;
+    }
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+
+    if (!draw_state.font_vao) {
+        glGenVertexArrays(1, &draw_state.font_vao);
+    }
+    glGenBuffers(1, &draw_state.font_vert_vbo);
+    glGenBuffers(1, &draw_state.font_color_vbo);
+    glGenBuffers(1, &draw_state.font_ibo);
+
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.font_vert_vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(GlTexVertex), vertex_data, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.font_color_vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(Color), color_data, GL_DYNAMIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.font_ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
+
+    glBindVertexArray(draw_state.font_vao);
+    glUseProgram(state.text_program_id);
+
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.font_vert_vbo);
+    glEnableVertexAttribArray(position_location);
+    glVertexAttribPointer(position_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), NULL);
+    glEnableVertexAttribArray(tex_coords_location);
+    glVertexAttribPointer(tex_coords_location, 2, GL_FLOAT, GL_FALSE, sizeof(GlTexVertex), (void*)(2 * sizeof(GLfloat)));
+
+    glBindBuffer(GL_ARRAY_BUFFER, draw_state.font_color_vbo);
+    glEnableVertexAttribArray(color_location);
+    glVertexAttribPointer(color_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Color), NULL);
+
+    glUseProgram(state.text_program_id);
+    GLint uniform_screen = glGetUniformLocation(state.text_program_id, "screen");
+    glUniform2f(uniform_screen, state.window_width, state.window_height);
+
+    GLint uniform_tex = glGetUniformLocation(state.text_program_id, "tex");
+    glUniform1i(uniform_tex, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, draw_state.font_ibo);
+    glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
+
+    glBindVertexArray(0);
+    glDisableVertexAttribArray(position_location);
+    glDisableVertexAttribArray(tex_coords_location);
+    glDisableVertexAttribArray(color_location);
+    glUseProgram(0);
+
+    glDeleteBuffers(1, &draw_state.font_vert_vbo);
+    glDeleteBuffers(1, &draw_state.font_color_vbo);
+    glDeleteBuffers(1, &draw_state.font_ibo);
+}
+
+void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count) {
+
+    int char_count = 0;
+    for (int i = 0; i < count; i++) {
+        char_count += strlen(texts[i]);
+    }
+
+    if (char_count != draw_state.last_text_count) {
+        if (draw_state.text_vertex_data) {
+            free(draw_state.text_vertex_data);
+            draw_state.text_vertex_data = 0;
+        }
+        if (draw_state.text_index_data) {
+            free(draw_state.text_index_data);
+            draw_state.text_index_data = 0;
+        }
+        draw_state.text_vertex_data = (GlTexVertex*)malloc(sizeof(GlTexVertex) * char_count * 4);
+        draw_state.text_color_data = (Color*)malloc(sizeof(Color) * char_count * 4);
+        draw_state.text_index_data = (GLuint*)malloc(sizeof(GLuint) * char_count * 6);
+
+        memset(draw_state.text_index_data, 0, sizeof(GLuint) * char_count * 6);
+        for (int i = 0; i < char_count; i++) {
+            draw_state.text_index_data[i * 6 + 0] = 0 + i * 4;
+            draw_state.text_index_data[i * 6 + 1] = 1 + i * 4;
+            draw_state.text_index_data[i * 6 + 2] = 2 + i * 4;
+            draw_state.text_index_data[i * 6 + 3] = 1 + i * 4;
+            draw_state.text_index_data[i * 6 + 4] = 2 + i * 4;
+            draw_state.text_index_data[i * 6 + 5] = 3 + i * 4;
+        }
+    }
+    draw_state.last_text_count = char_count;
+
+    memset(draw_state.text_vertex_data, 0, sizeof(GlTexVertex) * char_count * 4);
+    memset(draw_state.text_color_data, 0, sizeof(Color) * char_count * 4);
+    GlRectVertices out;
+
+    int ci = 0;
     for (int i = 0; i < count; i++) {
 
-        // TODO respect font size
-
-        int buf_width = (int)sizes[i] * strlen(texts[i]);
-        int buf_height = (int)sizes[i];
-        unsigned char *buf = (unsigned char *)calloc(buf_width * buf_height, sizeof(unsigned char));
-
         int ch = 0;
-        float xpos = 2.0f;
-
-        float scale = stbtt_ScaleForPixelHeight(&state.font.info, (int)sizes[i]);
-        int ascent;
-        stbtt_GetFontVMetrics(&state.font.info, &ascent, 0, 0);
-        int baseline = (int)(ascent * scale);
-
+        float posx = positions[i].x;
+        float posy = positions[i].y;
         while (texts[i][ch]) {
-            int advance, lsb, x0, y0, x1, y1;
-            float x_shift = xpos - (float)floor(xpos);
-            stbtt_GetCodepointHMetrics(&font.info, texts[i][ch], &advance, &lsb);
-            stbtt_GetCodepointBitmapBoxSubpixel(&font.info, texts[i][ch], scale, scale, x_shift, 0, &x0, &y0, &x1, &y1);
 
-            // TODO don't overwrite old data
+            stbtt_aligned_quad q;
+            stbtt_GetPackedQuad(draw_state.font_packed_chars, 512, 512, (int)texts[i][ch]-32, &posx, &posy, &q, 0);
 
-            stbtt_MakeCodepointBitmapSubpixel(&font.info, &buf[((baseline + y0) * buf_width + (int)xpos + x0)], x1 - x0, y1 - y0, buf_width, scale, scale, x_shift, 0, texts[i][ch]);
+            // TODO respect rotation
+            GlTexVertex vertex_data[4];
+            /* GLuint index_data[6]; */
 
-            xpos += (advance * scale);
-            if (texts[i][ch + 1]) {
-                xpos += scale * stbtt_GetCodepointKernAdvance(&font.info, texts[i][ch], texts[i][ch + 1]);
-            }
+            Point origin = (Point){origins[i].x - (q.x0 - positions[i].x), origins[i].y - (q.y0 - positions[i].y)};
+            Rect rect = (Rect){q.x0 + origin.x, q.y0 + origin.y, (q.x1 - q.x0), (q.y1 - q.y0)};
+            out = get_new_rect_vertices(rect, origin, rotations[i]);
+
+            /* GLuint index_data[] = { 0, 1, 2, 1, 2, 3 }; */
+
+            draw_state.text_vertex_data[ci * 4 + 0].position = out.p1;
+            draw_state.text_vertex_data[ci * 4 + 0].uv =       (Point){q.s0, q.t0};
+            draw_state.text_vertex_data[ci * 4 + 1].position = out.p2;
+            draw_state.text_vertex_data[ci * 4 + 1].uv =       (Point){q.s1, q.t0};
+            draw_state.text_vertex_data[ci * 4 + 2].position = out.p3;
+            draw_state.text_vertex_data[ci * 4 + 2].uv =       (Point){q.s0, q.t1};
+            draw_state.text_vertex_data[ci * 4 + 3].position = out.p4;
+            draw_state.text_vertex_data[ci * 4 + 3].uv =       (Point){q.s1, q.t1};
+
+            /* Color color_data[4] = {0}; */
+            draw_state.text_color_data[ci * 4 + 0] = colors[i];
+            draw_state.text_color_data[ci * 4 + 1] = colors[i];
+            draw_state.text_color_data[ci * 4 + 2] = colors[i];
+            draw_state.text_color_data[ci * 4 + 3] = colors[i];
+
+            /* gl_draw_text(draw_state.font_texture_id, vertex_data, index_data, color_data, 4, 2); */
+
             ch++;
+            ci++;
         }
-
-        /* printf("bbox: %d x %d\n", font.bbox_width, font.bbox_height); */
-        unsigned char *tex_buf = (unsigned char *)malloc(buf_width * buf_height * 4);
-        for (int j = 0; j < buf_width * buf_height; j++) {
-            tex_buf[j * 4 + 0] = colors[i].r;
-            tex_buf[j * 4 + 1] = colors[i].g;
-            tex_buf[j * 4 + 2] = colors[i].b;
-            tex_buf[j * 4 + 3] = buf[j];
-        }
-
-        Texture texture = app_load_texture(tex_buf, buf_width, buf_height);
-
-        free(buf);
-        free(tex_buf);
-
-        Rect src_rect = {0, 0, (float)buf_width, (float)buf_height};
-        Rect dest_rect = {positions[i].x, positions[i].y, (float)buf_width, (float)buf_height};
-        app_draw_rotated_textures(texture, &src_rect, &dest_rect, &(origins[i]), &(rotations[i]), 1);
     }
+
+    gl_draw_text(draw_state.font_texture_id, draw_state.text_vertex_data, draw_state.text_index_data, draw_state.text_color_data, 4 * char_count, 2 * char_count);
+
+
+    /* Font font = state.font; */
+
+    /* for (int i = 0; i < count; i++) { */
+
+    /*     // TODO respect font size */
+
+    /*     int buf_width = (int)sizes[i] * strlen(texts[i]); */
+    /*     int buf_height = (int)sizes[i]; */
+    /*     unsigned char *buf = (unsigned char *)calloc(buf_width * buf_height, sizeof(unsigned char)); */
+
+    /*     int ch = 0; */
+    /*     float xpos = 2.0f; */
+
+    /*     float scale = stbtt_ScaleForPixelHeight(&state.font.info, (int)sizes[i]); */
+    /*     int ascent; */
+    /*     stbtt_GetFontVMetrics(&state.font.info, &ascent, 0, 0); */
+    /*     int baseline = (int)(ascent * scale); */
+
+    /*     while (texts[i][ch]) { */
+    /*         int advance, lsb, x0, y0, x1, y1; */
+    /*         float x_shift = xpos - (float)floor(xpos); */
+    /*         stbtt_GetCodepointHMetrics(&font.info, texts[i][ch], &advance, &lsb); */
+    /*         stbtt_GetCodepointBitmapBoxSubpixel(&font.info, texts[i][ch], scale, scale, x_shift, 0, &x0, &y0, &x1, &y1); */
+
+    /*         // TODO don't overwrite old data */
+
+    /*         stbtt_MakeCodepointBitmapSubpixel(&font.info, &buf[((baseline + y0) * buf_width + (int)xpos + x0)], x1 - x0, y1 - y0, buf_width, scale, scale, x_shift, 0, texts[i][ch]); */
+
+    /*         xpos += (advance * scale); */
+    /*         if (texts[i][ch + 1]) { */
+    /*             xpos += scale * stbtt_GetCodepointKernAdvance(&font.info, texts[i][ch], texts[i][ch + 1]); */
+    /*         } */
+    /*         ch++; */
+    /*     } */
+
+    /*     /1* printf("bbox: %d x %d\n", font.bbox_width, font.bbox_height); *1/ */
+    /*     unsigned char *tex_buf = (unsigned char *)malloc(buf_width * buf_height * 4); */
+    /*     for (int j = 0; j < buf_width * buf_height; j++) { */
+    /*         tex_buf[j * 4 + 0] = colors[i].r; */
+    /*         tex_buf[j * 4 + 1] = colors[i].g; */
+    /*         tex_buf[j * 4 + 2] = colors[i].b; */
+    /*         tex_buf[j * 4 + 3] = buf[j]; */
+    /*     } */
+
+    /*     Texture texture = app_load_texture(tex_buf, buf_width, buf_height); */
+
+    /*     free(buf); */
+    /*     free(tex_buf); */
+
+    /*     Rect src_rect = {0, 0, (float)buf_width, (float)buf_height}; */
+    /*     Rect dest_rect = {positions[i].x, positions[i].y, (float)buf_width, (float)buf_height}; */
+    /*     app_draw_rotated_textures(texture, &src_rect, &dest_rect, &(origins[i]), &(rotations[i]), 1); */
+    /* } */
 }
 
-void app_draw_text(const char *text, Point pos, float size, Color color) {
+void app_draw_text(char *text, Point pos, float size, Color color) {
     Point origin = {0.0f, 0.0f};
     float rotation = 0.0f;
     app_draw_rotated_text(&text, &pos, &size, &color, &origin, &rotation, 1);

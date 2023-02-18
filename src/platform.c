@@ -28,6 +28,7 @@ typedef struct State {
     SDL_GLContext context;
     GLuint tri_program_id;
     GLuint texture_program_id;
+    GLuint text_program_id;
     /* GLuint basic_program_id; */
 
     Font font;
@@ -101,6 +102,10 @@ bool app_init(const char *title, int window_width, int window_height) {
     }
     state.texture_program_id = gl_create_program(TEXTURE_VERT_SRC, TEXTURE_FRAG_SRC);
     if (!state.texture_program_id) {
+        return false;
+    }
+    state.text_program_id = gl_create_program(TEXT_VERT_SRC, TEXT_FRAG_SRC);
+    if (!state.text_program_id) {
         return false;
     }
     /* state.basic_program_id = gl_create_program(BASIC_VERT_SRC, BASIC_FRAG_SRC); */

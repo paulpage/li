@@ -9,7 +9,7 @@
 
 #include "platform.h"
 
-#define RECT_COUNT 100000
+#define RECT_COUNT 10000
 
 Rect rects[RECT_COUNT] = {0};
 Color colors[RECT_COUNT] = {0};
@@ -17,6 +17,11 @@ Point origins[RECT_COUNT] = {0.0f};
 float rotations[RECT_COUNT] = {0.0f};
 
 Rect src_rects[RECT_COUNT] = {0};
+
+Point positions[RECT_COUNT] = {0.0f};
+float sizes[RECT_COUNT] = {0.0f};
+
+char **text;
 
 static float frand() {
     return (float)rand() / (float)RAND_MAX;
@@ -31,14 +36,19 @@ static void init_rects() {
         rects[i] = (Rect){frand() * 800.0f, frand() * 800.0f, frand() * 50.0f, frand() * 50.0f};
         colors[i] = (Color){rand() % 255, rand() % 255, rand() % 255, 255};
         origins[i] = (Point){rects[i].width / 2.0f, rects[i].height / 2.0f};
-        rotations[i] = frand() * 10.0f;
+        /* rotations[i] = frand() * 10.0f; */
+        rotations[i] = 0.0f;
 
         src_rects[i] = (Rect){0.0f, 0.0f, 128.0f, 128.0f};
+
+        positions[i] = (Point){frand() * 800.0f, frand() * 800.0f};
+        sizes[i] = 20.0f;
     }
 }
 
 int main(int argc, char **argv) {
-    srand(time(NULL));
+    /* srand(time(NULL)); */
+    srand(500);
 
     App app = {0};
     if (!app_init("Sample", 400, 400)) {
@@ -46,6 +56,21 @@ int main(int argc, char **argv) {
     }
 
     init_rects();
+    text = malloc(sizeof(char*) * RECT_COUNT);
+    for (int i = 0; i < RECT_COUNT; i++) {
+        text[i] = "Hello";
+        /* text[i] = malloc(sizeof(char) * 10); */
+        /* text[i][0] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][1] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][2] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][3] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][4] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][5] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][6] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][7] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][8] = (char)randint((int)'a', (int)'z'); */
+        /* text[i][9] = '\0'; */
+    }
 
     Color background = {0, 100, 0, 255};
 
@@ -89,14 +114,17 @@ int main(int argc, char **argv) {
         rotation += 0.01f;
 
         for (int i = 0; i < RECT_COUNT; i++) {
-            rotations[i] = app.mouse.x / 1000.0f;
+            /* rotations[i] = app.mouse.x / 500.0f; */
+            rotations[i] += 0.1f;
             /* app_draw_rotated_rects(&rects[i], &colors[i], &origins[i], &rotations[i], 1); */
         }
 
         /* app_draw_rotated_rects(rects, colors, origins, rotations, RECT_COUNT); */
 
-        app_draw_rotated_textures(texture, src_rects, rects, origins, rotations, RECT_COUNT);
+        /* app_draw_rotated_textures(texture, src_rects, rects, origins, rotations, RECT_COUNT); */
         /* app_draw_texture(texture, srcrect, destrect); */
+
+        app_draw_rotated_text(text, positions, sizes, colors, origins, rotations, RECT_COUNT);
 
         /* app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground); */
         /* app_draw_text("Heljo, World!", (Point){50.0f, 400.0f}, 50.0f, foreground); */

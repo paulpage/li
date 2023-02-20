@@ -9,7 +9,7 @@ GLuint gl_create_shader(GLenum type, const GLchar *src) {
     if (success == GL_FALSE) {
         int len = 0;
         glGetShaderiv(id, GL_INFO_LOG_LENGTH, &len);
-        char buffer[len]; // TODO do we have to zero this?
+        char *buffer = malloc(sizeof(char) * len);
         glGetShaderInfoLog(id, len, NULL, buffer);
         printf("Error creating shader: %s\n", buffer);
         glDeleteShader(id);
@@ -32,7 +32,7 @@ GLuint gl_create_program(const char *vert_src, const char *frag_src) {
     if (success == GL_FALSE) {
         int len = 0;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len);
-        char buffer[len];
+        char *buffer = malloc(sizeof(char) * len);
         glGetProgramInfoLog(program, len, NULL, buffer);
         printf("Error creating program: %s\n", buffer);
         glDeleteProgram(program);

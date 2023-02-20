@@ -16,8 +16,6 @@ typedef struct Font {
     stbtt_fontinfo info;
     unsigned char *buf;
     long buflen;
-    /* int bbox_width; */
-    /* int bbox_height; */
 } Font;
 
 typedef struct State {
@@ -199,11 +197,23 @@ void app_update(App *s) {
     }
 }
 
+FILE *pjp_fopen(const char *filename, const char *mode) {
+    FILE *f;
+#if defined (_MSC_VER) && _MSC_VER >= 1400
+    if (0 != fopen_s(&f, filename, mode)) {
+        f = 0;
+    }
+#else
+    f = fopen(filename, mode);
+#endif
+    return f;
+}
+
 uint8_t *read_file(const char *filename, long *out_len) {
     FILE *f;
     uint8_t *buf;
 
-    f = fopen(filename, "rb");
+    f = pjp_fopen(filename, "rb");
     fseek(f, 0, SEEK_END);
     *out_len = ftell(f);
     rewind(f);

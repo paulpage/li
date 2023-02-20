@@ -35,7 +35,7 @@ typedef struct DrawState {
     int last_text_count;
     GlTexVertex *text_vertex_data;
     Color *text_color_data;
-    int *text_index_data;
+    GLuint *text_index_data;
     GLuint font_vao;
     GLuint font_vert_vbo;
     GLuint font_color_vbo;
@@ -224,8 +224,6 @@ static void gl_draw_textures(Texture texture, GlTexVertex vertex_data[], GLuint 
 
 void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *rotations, int count) {
 
-    float v[8];
-
     if (count != draw_state.last_rect_count) {
         if (draw_state.tri_vertex_data) {
             printf("FREE VERTEX\n");
@@ -253,8 +251,6 @@ void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *r
     }
     draw_state.last_rect_count = count;
 
-    uint64_t start = app_get_performance_counter();
-
     memset(draw_state.tri_vertex_data, 0, sizeof(GlVertex) * count * 4);
     GlRectVertices out;
     for (int i = 0; i < count; i++) {
@@ -268,10 +264,6 @@ void app_draw_rotated_rects(Rect *rects, Color *colors, Point *origins, float *r
         draw_state.tri_vertex_data[i * 4 + 3].position = out.p4;
         draw_state.tri_vertex_data[i * 4 + 3].color = colors[i];
     }
-
-    uint64_t end = app_get_performance_counter();
-    float elapsed = (float)(end - start) / (float)app_get_performance_frequency() * 1000.0f;
-    /* printf("loop time: %.4f ms\n", elapsed); */
 
     gl_draw_triangles(draw_state.tri_vertex_data, draw_state.tri_index_data, 4 * count, 2 * count);
 }
@@ -386,10 +378,6 @@ void app_load_font(const char *filename) {
     state.font = (Font){0};
     state.font.buf = read_file(filename, &state.font.buflen);
     stbtt_InitFont(&state.font.info, state.font.buf, 0);
-    int x0, y0, x1, y1;
-    /* stbtt_GetFontBoundingBox(&state.font.info, &x0, &y0, &x1, &y1); */
-    /* state.font.bbox_width = x1 - x0; */
-    /* state.font.bbox_height = y1 - y0; */
 
     unsigned char *temp_bitmap = malloc(512 * 512);
    stbtt_PackBegin(&draw_state.font_pack_ctx, temp_bitmap, 512, 512, 0, 1, NULL);
@@ -467,9 +455,12 @@ void gl_draw_text(GLuint texture, GlTexVertex vertex_data[], GLuint index_data[]
 
 void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count) {
 
+    // TODO respect text size
+    sizes;
+
     int char_count = 0;
     for (int i = 0; i < count; i++) {
-        char_count += strlen(texts[i]);
+        char_count += (int)strlen(texts[i]);
     }
 
     if (char_count != draw_state.last_text_count) {
@@ -512,15 +503,9 @@ void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *
             stbtt_aligned_quad q;
             stbtt_GetPackedQuad(draw_state.font_packed_chars, 512, 512, (int)texts[i][ch]-32, &posx, &posy, &q, 0);
 
-            // TODO respect rotation
-            GlTexVertex vertex_data[4];
-            /* GLuint index_data[6]; */
-
             Point origin = (Point){origins[i].x - (q.x0 - positions[i].x), origins[i].y - (q.y0 - positions[i].y)};
             Rect rect = (Rect){q.x0 + origin.x, q.y0 + origin.y, (q.x1 - q.x0), (q.y1 - q.y0)};
             out = get_new_rect_vertices(rect, origin, rotations[i]);
-
-            /* GLuint index_data[] = { 0, 1, 2, 1, 2, 3 }; */
 
             draw_state.text_vertex_data[ci * 4 + 0].position = out.p1;
             draw_state.text_vertex_data[ci * 4 + 0].uv =       (Point){q.s0, q.t0};
@@ -531,13 +516,10 @@ void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *
             draw_state.text_vertex_data[ci * 4 + 3].position = out.p4;
             draw_state.text_vertex_data[ci * 4 + 3].uv =       (Point){q.s1, q.t1};
 
-            /* Color color_data[4] = {0}; */
             draw_state.text_color_data[ci * 4 + 0] = colors[i];
             draw_state.text_color_data[ci * 4 + 1] = colors[i];
             draw_state.text_color_data[ci * 4 + 2] = colors[i];
             draw_state.text_color_data[ci * 4 + 3] = colors[i];
-
-            /* gl_draw_text(draw_state.font_texture_id, vertex_data, index_data, color_data, 4, 2); */
 
             ch++;
             ci++;

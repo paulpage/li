@@ -77,13 +77,15 @@ int main(int argc, char **argv) {
     Color foreground = {0, 0, 255, 255};
     Rect rect = {10.0f, 10.0f, 50.0f, 50.0f};
 
-    Rect destrect = {40.0f, 40.0f, 256.0f, 256.0f};
-    Rect srcrect = {0.0f, 0.0f, 128.0f, 128.0f};
-    Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png");
+    /* Rect destrect = {40.0f, 40.0f, 256.0f, 256.0f}; */
+    /* Rect srcrect = {0.0f, 0.0f, 128.0f, 128.0f}; */
+    /* Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png"); */
+    Texture texture = app_load_texture_from_file("C:\\Users\\Paul\\Pictures\\Emoji\\joy.png");
 
     float rotation = 0.0f;
 
-    app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf");
+    /* app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf"); */
+    app_load_font("C:\\Windows\\Fonts\\Inkfree.ttf");
 
     uint64_t start = app_get_performance_counter(), end = 0;
 
@@ -110,7 +112,7 @@ int main(int argc, char **argv) {
         rect.x = app.mouse.x;
         rect.y = app.mouse.y;
 
-        Point origin = {25.0f, 25.0f};
+        /* Point origin = {25.0f, 25.0f}; */
         rotation += 0.01f;
 
         for (int i = 0; i < RECT_COUNT; i++) {
@@ -121,12 +123,12 @@ int main(int argc, char **argv) {
 
         /* app_draw_rotated_rects(rects, colors, origins, rotations, RECT_COUNT); */
 
-        /* app_draw_rotated_textures(texture, src_rects, rects, origins, rotations, RECT_COUNT); */
+        app_draw_rotated_textures(texture, src_rects, rects, origins, rotations, RECT_COUNT);
         /* app_draw_texture(texture, srcrect, destrect); */
 
         app_draw_rotated_text(text, positions, sizes, colors, origins, rotations, RECT_COUNT);
 
-        /* app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground); */
+        app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground);
         /* app_draw_text("Heljo, World!", (Point){50.0f, 400.0f}, 50.0f, foreground); */
 
         /* app_draw_text(s, (Point){100.0f, 200.0f}, 50.0f, foreground); */

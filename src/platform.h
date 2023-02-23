@@ -68,6 +68,8 @@ void app_load_font(const char *filename);
 void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count);
 void app_draw_text(char *text, Point pos, float size, Color color);
 
+void app_draw_model(float *vertices, float *indices, int vertex_count, int index_count);
+
 GLuint gl_create_shader(GLenum type, const GLchar *src);
 GLuint gl_create_program(const char *vert_src, const char *frag_src);
 

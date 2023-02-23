@@ -27,7 +27,7 @@ typedef struct State {
     GLuint tri_program_id;
     GLuint texture_program_id;
     GLuint text_program_id;
-    /* GLuint basic_program_id; */
+    GLuint model_program_id;
 
     Font font;
 } State;
@@ -106,10 +106,10 @@ bool app_init(const char *title, int window_width, int window_height) {
     if (!state.text_program_id) {
         return false;
     }
-    /* state.basic_program_id = gl_create_program(BASIC_VERT_SRC, BASIC_FRAG_SRC); */
-    /* if (!state.basic_program_id) { */
-    /*     return false; */
-    /* } */
+    state.model_program_id = gl_create_program(MODEL_VERT_SRC, MODEL_FRAG_SRC);
+    if (!state.model_program_id) {
+        return false;
+    }
 
     return true;
 }

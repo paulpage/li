@@ -589,3 +589,68 @@ void app_draw_text(char *text, Point pos, float size, Color color) {
     float rotation = 0.0f;
     app_draw_rotated_text(&text, &pos, &size, &color, &origin, &rotation, 1);
 }
+
+typedef struct GlModelVertex {
+    float x, y, z, w;
+    Color color;
+} GlModelVertex;
+
+void gl_draw_model(GlModelVertex vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CW);
+
+    GLuint vao, vbo, ibo;
+
+    glGenVertexArrays(1, &vao);
+
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_count * sizeof(GlModelVertex), vertex_data, GL_DYNAMIC_DRAW);
+
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
+
+    GLint position_location = -1, color_location = -1;
+    position_location = glGetAttribLocation(state.tri_program_id, "position");
+    color_location = glGetAttribLocation(state.tri_program_id, "color");
+    if (position_location == -1 || color_location == -1) {
+        return;
+    }
+
+    glBindVertexArray(vao);
+    glUseProgram(state.model_program_id);
+    glBindBuffer(GL_ARRAY_BUFFER, vao);
+
+    glEnableVertexAttribArray(position_location);
+    glVertexAttribPointer(position_location, 4, GL_FLOAT, GL_FALSE, sizeof(GlModelVertex), 0);
+    glEnableVertexAttribArray(color_location);
+    glVertexAttribPointer(color_location, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(GlVertex), (void*)(4 * sizeof(float)));
+
+    GLint uniform_screen = glGetUniformLocation(state.model_program_id, "screen");
+    GLint uniform_offset = glGetUniformLocation(state.model_program_id, "offset");
+    GLint uniform_z_near = glGetUniformLocation(state.model_program_id, "z_near");
+    GLint uniform_z_far = glGetUniformLocation(state.model_program_id, "z_far");
+    GLint uniform_frustum_scale = glGetUniformLocation(state.model_program_id, "frustum_scale");
+
+    glUniform2f(uniform_screen, state.window_width, state.window_height);
+    glUniform1f(uniform_z_near, 1.0f);
+    glUniform1f(uniform_z_far, 3.0f);
+    glUniform1f(uniform_frustum_scale, 1.0f);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
+
+    glDisableVertexAttribArray(position_location);
+    glDisableVertexAttribArray(color_location);
+    glUseProgram(0);
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ibo);
+    glDeleteVertexArrays(1, &vao);
+}
+
+void app_draw_model(float *vertices, float *indices, int vertex_count, int index_count, Color color) {
+
+}

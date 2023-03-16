@@ -34,9 +34,12 @@ typedef struct State {
 
 static State state = {0};
 
+#include "string.c"
+/* #include "math.c" */
 #include "gl.c"
-#include "drawing.c"
 #include "shaders.c"
+#include "drawing.c"
+#include "models.c"
 
 void GLAPIENTRY gl_error_callback(
     GLenum source,
@@ -94,19 +97,19 @@ bool app_init(const char *title, int window_width, int window_height) {
     glDebugMessageCallback(gl_error_callback, 0);
 
     // GL Programs
-    state.tri_program_id = gl_create_program(TRI_VERT_SRC, TRI_FRAG_SRC);
+    state.tri_program_id = gl_create_program("src/shaders/triangle.glsl");
     if (!state.tri_program_id) {
         return false;
     }
-    state.texture_program_id = gl_create_program(TEXTURE_VERT_SRC, TEXTURE_FRAG_SRC);
+    state.texture_program_id = gl_create_program("src/shaders/texture.glsl");
     if (!state.texture_program_id) {
         return false;
     }
-    state.text_program_id = gl_create_program(TEXT_VERT_SRC, TEXT_FRAG_SRC);
+    state.text_program_id = gl_create_program("src/shaders/text.glsl");
     if (!state.text_program_id) {
         return false;
     }
-    state.model_program_id = gl_create_program(MODEL_VERT_SRC, MODEL_FRAG_SRC);
+    state.model_program_id = gl_create_program("src/shaders/model.glsl");
     if (!state.model_program_id) {
         return false;
     }
@@ -195,33 +198,6 @@ void app_update(App *s) {
                 break;
         }
     }
-}
-
-FILE *pjp_fopen(const char *filename, const char *mode) {
-    FILE *f;
-#if defined (_MSC_VER) && _MSC_VER >= 1400
-    if (0 != fopen_s(&f, filename, mode)) {
-        f = 0;
-    }
-#else
-    f = fopen(filename, mode);
-#endif
-    return f;
-}
-
-uint8_t *read_file(const char *filename, long *out_len) {
-    FILE *f;
-    uint8_t *buf;
-
-    f = pjp_fopen(filename, "rb");
-    fseek(f, 0, SEEK_END);
-    *out_len = ftell(f);
-    rewind(f);
-
-    buf = (uint8_t*)malloc(*out_len * sizeof(uint8_t));
-    fread(buf, *out_len, 1, f);
-    fclose(f);
-    return buf;
 }
 
 uint64_t app_get_performance_counter() {

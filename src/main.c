@@ -31,6 +31,14 @@ static int randint(int start, int stop) {
     return rand() % (stop - start + 1) + start;
 }
 
+typedef struct Camera {
+    Vec3 focus;
+    float distance;
+    float rot_horizontal;
+    float rot_vertical;
+    float fovy;
+} Camera;
+
 static void init_rects() {
     for (int i = 0; i < RECT_COUNT; i++) {
         rects[i] = (Rect){frand() * 800.0f, frand() * 800.0f, frand() * 50.0f, frand() * 50.0f};
@@ -44,6 +52,132 @@ static void init_rects() {
         positions[i] = (Point){frand() * 800.0f, frand() * 800.0f};
         sizes[i] = 20.0f;
     }
+}
+
+static void draw_cube(App *app, Camera camera) {
+    float vertices[] = {
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f
+    };
+    unsigned int indices[] = {
+        /* 0, 1, 2, 1, 2, 3, */
+        /* 0, 1, 4, 1, 4, 5, */
+        /* 0, 2, 4, 2, 4, 6, */
+        /* 1, 3, 5, 3, 5, 7, */
+        /* 2, 3, 6, 3, 6, 7, */
+        /* 4, 6, 5, 6, 5, 7 */
+        0, 1, 2, 2, 1, 3,
+        0, 1, 4, 4, 1, 5,
+        0, 2, 4, 4, 2, 6,
+        1, 3, 5, 5, 3, 7,
+        2, 3, 6, 6, 3, 7,
+        4, 6, 5, 5, 6, 7
+    };
+    Color color = {255, 0, 0, 255};
+
+    float light[] = {
+        -5.0, -5.0, -5.0,
+        1.0, 1.0, 1.0,
+
+        0.1, 0.1, 0.1,
+        0.8, 0.8, 0.8,
+        1.0, 1.0, 1.0,
+    };
+
+    Mat4 transform = (Mat4){
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    };
+
+    // camera -----
+    
+    // look at -------
+
+    Vec3 eye = (Vec3){
+        camera.focus.z + camera.distance * m_sin(camera.rot_vertical) * m_sin(camera.rot_horizontal),
+        camera.focus.y + camera.distance * m_cos(camera.rot_vertical),
+        camera.focus.x + camera.distance * m_sin(camera.rot_vertical) * m_cos(camera.rot_horizontal)
+    };
+    Vec3 at = camera.focus;
+    Vec3 up = V3(0.0f, 1.0f, 0.0f);
+
+    Mat4 view = transform;
+    /* Mat4 view = look_at_rh(eye, at, up); */
+
+    /* Vec3 zaxis = norm_v3(sub_v3(at, eye)); */
+    /* Vec3 xaxis = norm_v3(cross(zaxis, up)); */
+    /* Vec3 yaxis = cross(xaxis, zaxis); */
+
+    /* zaxis = mul_v3f(zaxis, -1.0f); */
+
+    /* Mat4 view = { */
+    /*     xaxis.x, xaxis.y, xaxis.z, -dot_v3(xaxis, eye), */
+    /*     yaxis.x, yaxis.y, yaxis.z, -dot_v3(yaxis, eye), */
+    /*     zaxis.x, zaxis.y, zaxis.z, -dot_v3(zaxis, eye), */
+    /*     0, 0, 0, 1 */
+    /* }; */
+
+    // perspective -----
+
+    /* float a = 1.0f; */
+    /* float b = app->window.x / app->window.y; // aspect ratio */
+    /* float c = 3.0f; // focal distance */
+    /* float n = 0.01f; // near */
+    /* float f = 100.0f; // far */
+    /* float d = (n+f) / (n-f); */
+    /* float e = (2*f*n) / (n-f); */
+
+    /* float near = 0.01f; */
+    /* float far = 100.0f; */
+    /* float aspect_ratio = app->window.x / app->window.y; */
+    /* float fov = camera.fovy; */
+
+    /* float s = 1 / (tanf(fov / 2.0f * M_PI / 180.0f)); */
+
+    float fov = camera.fovy;
+    float aspect_ratio = app->window.x / app->window.y;
+    float near = 0.001f;
+    float far = 100.0f;
+    Mat4 proj = perspective_rh_no(deg_to_rad*fov, aspect_ratio, near, far);
+    /* Mat4 proj = transform; */
+
+
+    for (int i = 0; i < 8; i++) {
+        Vec4 v = V4(vertices[i * 3 + 0], vertices[i * 3 + 1], vertices[i * 3 + 2], 0.0f);
+        /* Vec4 result = mul_m4v4(mul_m4(mul_m4(transform, view), proj), v); */
+        Vec4 result = mul_m4v4(mul_m4(mul_m4(proj, view), transform), v);
+        printf("vertex %d: %f %f %f\n", i, result.x, result.y, result.z);
+    }
+
+    /* Mat4 proj = { */
+    /*     a*c, 0, 0, 0, */
+    /*     0, b*c, 0, 0, */
+    /*     0, 0, d, e, */
+    /*     0, 0, -1, 0 */
+    /* }; */
+
+    /* Mat4 proj = { */
+    /*     s,    0.0f, 0.0f, 0.0f, */
+    /*     0.0f, s,    0.0f, 0.0f, */
+    /*     0.0f, 0.0f, -far/(far-near), -1.0f, */
+    /*     0.0f, 0.0f, 0.0f, -(far*near)/(far-near), */
+    /* }; */
+
+    // -----------------
+
+    Vec3 view_position = eye;
+
+    // TODO might have to correct some of the above for degrees
+
+    app_draw_model(vertices, indices, 8, 36, transform, view, proj, view_position, light,color);
 }
 
 int main(int argc, char **argv) {
@@ -79,15 +213,22 @@ int main(int argc, char **argv) {
 
     /* Rect destrect = {40.0f, 40.0f, 256.0f, 256.0f}; */
     /* Rect srcrect = {0.0f, 0.0f, 128.0f, 128.0f}; */
-    /* Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png"); */
-    Texture texture = app_load_texture_from_file("C:\\Users\\Paul\\Pictures\\Emoji\\joy.png");
+    Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png");
+    /* Texture texture = app_load_texture_from_file("C:\\Users\\Paul\\Pictures\\Emoji\\joy.png"); */
 
     float rotation = 0.0f;
 
-    /* app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf"); */
-    app_load_font("C:\\Windows\\Fonts\\Inkfree.ttf");
+    app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf");
+    /* app_load_font("C:\\Windows\\Fonts\\Inkfree.ttf"); */
 
     uint64_t start = app_get_performance_counter(), end = 0;
+
+    Camera camera;
+    camera.focus = V3(0.0f, 0.0f, 0.0f);
+    camera.distance = 10.0f;
+    camera.rot_horizontal = 0.5f;
+    camera.rot_vertical = 0.5f;
+    camera.fovy = 45.0f;
 
     while (!app.should_quit) {
 
@@ -97,7 +238,7 @@ int main(int argc, char **argv) {
         char s[64] = {0};
         stbsp_snprintf(s, 64, "frame time: %.4f ms", elapsed);
 
-        printf("frame time: %.4f ms\n", elapsed);
+        /* printf("frame time: %.4f ms\n", elapsed); */
 
         start = app_get_performance_counter();
 
@@ -109,6 +250,15 @@ int main(int argc, char **argv) {
 
         app_clear(background);
 
+        draw_cube(&app, camera);
+
+        camera.rot_horizontal += 0.01f;
+
+        Rect r = {app.mouse.x, app.mouse.y, 50, 50};
+        Color c = {0, 0, 255, 255};
+        app_draw_rect(r, c);
+
+#if 0
         rect.x = app.mouse.x;
         rect.y = app.mouse.y;
 
@@ -132,7 +282,7 @@ int main(int argc, char **argv) {
         /* app_draw_text("Heljo, World!", (Point){50.0f, 400.0f}, 50.0f, foreground); */
 
         /* app_draw_text(s, (Point){100.0f, 200.0f}, 50.0f, foreground); */
-
+#endif
         app_present();
 
 

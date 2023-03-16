@@ -2,7 +2,7 @@ all: main stitch parse mesh_loader
 
 APP_SRC=src/main.c
 LIB_SRC=src/platform.c
-LIB_FAKESRC=src/drawing.c src/shaders.c
+LIB_FAKESRC=src/drawing.c src/shaders.c src/models.c src/string.c src/gl.c
 
 release: ${LIB_SRC} ${LIB_FAKESRC} ${APP_SRC}
 	${CC} ${LIB_SRC} ${APP_SRC} -O2 -o release-main -Ilib -lm `pkg-config sdl2 --cflags --libs`

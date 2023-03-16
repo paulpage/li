@@ -7,6 +7,8 @@
 #include "SDL.h"
 #include "SDL_opengl.h"
 
+#include "handmade_math.h"
+
 typedef struct Rect {
     float x, y, width, height;
 } Rect;
@@ -14,6 +16,18 @@ typedef struct Rect {
 typedef struct Point {
     float x, y;
 } Point;
+
+/* typedef struct Vec3 { */
+/*     float x, y, z; */
+/* } Vec3; */
+
+/* typedef struct Vec4 { */
+/*     float x, y, z, w; */
+/* } Vec4; */
+
+/* typedef struct Mat4 { */
+/*     float points[16]; */
+/* } Mat4; */
 
 typedef struct Color {
     uint8_t r;
@@ -68,14 +82,19 @@ void app_load_font(const char *filename);
 void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count);
 void app_draw_text(char *text, Point pos, float size, Color color);
 
-void app_draw_model(float *vertices, float *indices, int vertex_count, int index_count);
-
-GLuint gl_create_shader(GLenum type, const GLchar *src);
-GLuint gl_create_program(const char *vert_src, const char *frag_src);
-
-uint8_t *read_file(const char *filename, long *out_len);
+void app_draw_model(float *vertices, unsigned int *indices, int vertex_count, int index_count, Mat4 world, Mat4 view, Mat4 proj, Vec3 view_position, float light[15], Color color);
 
 uint64_t app_get_performance_counter();
 uint64_t app_get_performance_frequency();
+
+// Math
+float min(float a, float b);
+float max(float a, float b);
+Vec3 vec3_add(Vec3 a, Vec3 b);
+Vec3 vec3_sub(Vec3 a, Vec3 b);
+Vec3 vec3_mul(Vec3 a, float b);
+float vec3_dot(Vec3 a, Vec3 b);
+Vec3 vec3_cross(Vec3 a, Vec3 b);
+Vec3 vec3_norm(Vec3 a);
 
 #endif // _PLATFORM_H

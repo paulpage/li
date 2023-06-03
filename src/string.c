@@ -3,10 +3,10 @@
 #include <stdlib.h>
 
 typedef struct Str {
-    char *s;
+    unsigned char *s;
     long len;
 } Str;
-#define S(s) (Str){(char*)s, sizeof(s)-1}
+#define S(s) (Str){(unsigned char*)s, sizeof(s)-1}
 
 FILE *pjp_fopen(const char *filename, const char *mode) {
     FILE *f;
@@ -28,7 +28,7 @@ Str read_file(const char *filename) {
     out.len = ftell(f);
     rewind(f);
 
-    out.s = (char*)malloc(out.len * sizeof(char));
+    out.s = (unsigned char*)malloc(out.len * sizeof(unsigned char));
     fread(out.s, out.len, 1, f);
     fclose(f);
     return out;

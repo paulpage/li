@@ -17,18 +17,6 @@ typedef struct Point {
     float x, y;
 } Point;
 
-/* typedef struct Vec3 { */
-/*     float x, y, z; */
-/* } Vec3; */
-
-/* typedef struct Vec4 { */
-/*     float x, y, z, w; */
-/* } Vec4; */
-
-/* typedef struct Mat4 { */
-/*     float points[16]; */
-/* } Mat4; */
-
 typedef struct Color {
     uint8_t r;
     uint8_t g;
@@ -76,8 +64,6 @@ void app_draw_texture(Texture texture, Rect src_rect, Rect dest_rect);
 Texture app_load_texture(unsigned char *data, int width, int height);
 Texture app_load_texture_from_file(const char *filename);
 
-
-
 void app_load_font(const char *filename);
 void app_draw_rotated_text(char **texts, Point *positions, float *sizes, Color *colors, Point *origins, float *rotations, int count);
 void app_draw_text(char *text, Point pos, float size, Color color);
@@ -86,15 +72,5 @@ void app_draw_model(float *vertices, unsigned int *indices, int vertex_count, in
 
 uint64_t app_get_performance_counter();
 uint64_t app_get_performance_frequency();
-
-// Math
-float min(float a, float b);
-float max(float a, float b);
-Vec3 vec3_add(Vec3 a, Vec3 b);
-Vec3 vec3_sub(Vec3 a, Vec3 b);
-Vec3 vec3_mul(Vec3 a, float b);
-float vec3_dot(Vec3 a, Vec3 b);
-Vec3 vec3_cross(Vec3 a, Vec3 b);
-Vec3 vec3_norm(Vec3 a);
 
 #endif // _PLATFORM_H

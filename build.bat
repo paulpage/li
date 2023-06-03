@@ -1,6 +1,7 @@
 @echo off
 
-SET CommonCompilerFlags=/nologo /MTd /GR- /EHa- /Od /Oi /WX /W4 /wd4100 /FC /Zi
+REM 4101 and 4189 are for unused variables
+SET CommonCompilerFlags=/nologo /MTd /GR- /EHa- /Od /Oi /WX /W4 /wd4100 /wd4101 /wd4189 /FC /Zi
 REM /wd4201 /wd4189 /wd4505
 
 SET SDL_PATH=C:\dev\lib\sdl2\bin\x64

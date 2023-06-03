@@ -82,12 +82,12 @@ static void draw_cube(App *app, Camera camera) {
     Color color = {255, 0, 0, 255};
 
     float light[] = {
-        -5.0, -5.0, -5.0,
-        1.0, 1.0, 1.0,
+        -5.0f, -5.0f, -5.0f,
+        1.0f, 1.0f, 1.0f,
 
-        0.1, 0.1, 0.1,
-        0.8, 0.8, 0.8,
-        1.0, 1.0, 1.0,
+        0.1f, 0.1f, 0.1f,
+        0.8f, 0.8f, 0.8f,
+        1.0f, 1.0f, 1.0f,
     };
 
     Mat4 transform = (Mat4){
@@ -213,13 +213,13 @@ int main(int argc, char **argv) {
 
     /* Rect destrect = {40.0f, 40.0f, 256.0f, 256.0f}; */
     /* Rect srcrect = {0.0f, 0.0f, 128.0f, 128.0f}; */
-    Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png");
-    /* Texture texture = app_load_texture_from_file("C:\\Users\\Paul\\Pictures\\Emoji\\joy.png"); */
+    /* Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png"); */
+    Texture texture = app_load_texture_from_file("C:\\Users\\Paul\\Pictures\\Emoji\\joy.png");
 
     float rotation = 0.0f;
 
-    app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf");
-    /* app_load_font("C:\\Windows\\Fonts\\Inkfree.ttf"); */
+    /* app_load_font("/usr/share/fonts/TTF/DejaVuSans.ttf"); */
+    app_load_font("C:\\Windows\\Fonts\\Inkfree.ttf");
 
     uint64_t start = app_get_performance_counter(), end = 0;
 
@@ -278,7 +278,8 @@ int main(int argc, char **argv) {
 
         app_draw_rotated_text(text, positions, sizes, colors, origins, rotations, RECT_COUNT);
 
-        app_draw_text("Heljo, World!", (Point){50.0f, 50.0f}, 100.0f, foreground);
+    /* Texture texture = app_load_texture_from_file("/usr/share/icons/hicolor/128x128/apps/firefox.png"); */
+
         /* app_draw_text("Heljo, World!", (Point){50.0f, 400.0f}, 50.0f, foreground); */
 
         /* app_draw_text(s, (Point){100.0f, 200.0f}, 50.0f, foreground); */

@@ -91,10 +91,10 @@ bool app_init(const char *title, int window_width, int window_height) {
         printf("Warning: Unable to set VSync: %s\n", SDL_GetError());
     }
 
-    glEnable(GL_DEBUG_OUTPUT);
+    /* glEnable(GL_DEBUG_OUTPUT); */
     glEnable(GL_MULTISAMPLE);
     glEnable(GL_BLEND);
-    glDebugMessageCallback(gl_error_callback, 0);
+    /* glDebugMessageCallback(gl_error_callback, 0); */
 
     // GL Programs
     state.tri_program_id = gl_create_program("src/shaders/triangle.glsl");
@@ -145,6 +145,11 @@ void app_update(App *s) {
     s->mouse_right_pressed = false;
     s->mouse_middle_pressed = false;
 
+    s->scroll.x = 0.0f;
+    s->scroll.y = 0.0f;
+    s->precise_scroll.x = 0.0f;
+    s->precise_scroll.y = 0.0f;
+
     while (SDL_PollEvent(&e) != 0) {
         switch (e.type) {
             case SDL_QUIT:
@@ -162,6 +167,9 @@ void app_update(App *s) {
             case SDL_MOUSEWHEEL:
                 s->scroll.x += (float)e.wheel.x;
                 s->scroll.y += (float)e.wheel.y;
+                s->precise_scroll.x += e.wheel.preciseX;
+                s->precise_scroll.y += e.wheel.preciseY;
+                printf("%f %f\n", e.wheel.preciseX, e.wheel.preciseY);
                 break;
             case SDL_MOUSEMOTION:
                 s->mouse.x = (float)e.motion.x;

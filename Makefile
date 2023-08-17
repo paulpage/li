@@ -13,6 +13,10 @@ platform.o: ${LIB_SRC} ${LIB_FAKESRC}
 main: platform.o ${APP_SRC}
 	${CC} platform.o ${APP_SRC} -g -o main -Ilib -lm `pkg-config sdl2 --cflags --libs`
 
+tetris: platform.o tetris.c
+	${CC} platform.o tetris.c -g -o tetris -Ilib -lm `pkg-config sdl2 --cflags --libs`
+
+
 stitch: src/stitch.c
 	${CC} src/stitch.c -g -o stitch -Ilib -lm
 

@@ -154,7 +154,7 @@ static void draw_cube(App *app, Camera camera) {
         Vec4 v = V4(vertices[i * 3 + 0], vertices[i * 3 + 1], vertices[i * 3 + 2], 0.0f);
         /* Vec4 result = mul_m4v4(mul_m4(mul_m4(transform, view), proj), v); */
         Vec4 result = mul_m4v4(mul_m4(mul_m4(proj, view), transform), v);
-        printf("vertex %d: %f %f %f\n", i, result.x, result.y, result.z);
+        /* printf("vertex %d: %f %f %f\n", i, result.x, result.y, result.z); */
     }
 
     /* Mat4 proj = { */
@@ -230,6 +230,8 @@ int main(int argc, char **argv) {
     camera.rot_vertical = 0.5f;
     camera.fovy = 45.0f;
 
+    Rect r = {0, 0, 50, 50};
+
     while (!app.should_quit) {
 
         end = app_get_performance_counter();
@@ -254,7 +256,9 @@ int main(int argc, char **argv) {
 
         camera.rot_horizontal += 0.01f;
 
-        Rect r = {app.mouse.x, app.mouse.y, 50, 50};
+        /* Rect r = {app.mouse.x, app.mouse.y, 50, 50}; */
+        r.y += app.precise_scroll.y * 50.0f;
+        /* r.y += app.scroll.y * 50.0f; */
         Color c = {0, 0, 255, 255};
         app_draw_rect(r, c);
 

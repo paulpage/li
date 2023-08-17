@@ -36,6 +36,7 @@ typedef struct App {
 
     Point mouse;
     Point scroll;
+    Point precise_scroll;
     bool mouse_left_down;
     bool mouse_right_down;
     bool mouse_middle_down;

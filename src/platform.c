@@ -150,6 +150,10 @@ void app_update(App *s) {
     s->precise_scroll.x = 0.0f;
     s->precise_scroll.y = 0.0f;
 
+    for (int i = 0; i < KEY_COUNT; i++) {
+        s->keys_pressed[i] = false;
+    }
+
     while (SDL_PollEvent(&e) != 0) {
         switch (e.type) {
             case SDL_QUIT:
@@ -204,6 +208,13 @@ void app_update(App *s) {
                         break;
                 }
                 break;
+            case SDL_KEYDOWN:
+                s->keys_down[e.key.keysym.scancode] = true;
+                s->keys_pressed[e.key.keysym.scancode] = true;
+                break;
+            case SDL_KEYUP:
+                s->keys_down[e.key.keysym.scancode] = false;
+                break;
         }
     }
 }
@@ -214,4 +225,8 @@ uint64_t app_get_performance_counter() {
 
 uint64_t app_get_performance_frequency() {
     return SDL_GetPerformanceFrequency();
+}
+
+int app_get_ms() {
+    return SDL_GetTicks();
 }

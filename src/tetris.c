@@ -5,6 +5,10 @@
 
 #include "platform.h"
 
+#define INIT_X 3
+#define INIT_Y 18
+#define INIT_ROTATION 0
+
 uint8_t pieces[7][4][16] = {
     {
         {0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0},
@@ -45,6 +49,10 @@ uint8_t pieces[7][4][16] = {
 };
 
 uint8_t grid[40][10] = {0};
+int piece_x = INIT_X;
+int piece_y = INIT_Y;
+int piece_rotation = INIT_ROTATION;
+int piece_idx = 0;
 
 static float frand() {
     return (float)rand() / (float)RAND_MAX;
@@ -52,6 +60,10 @@ static float frand() {
 
 static int randint(int start, int stop) {
     return rand() % (stop - start + 1) + start;
+}
+
+void update() {
+    piece_y += 1;
 }
 
 int main(int argc, char **argv) {
@@ -70,21 +82,31 @@ int main(int argc, char **argv) {
 
     Color black = {0, 0, 0, 255};
 
-    int piece = 0;
-    int rotation = 0;
-    int xpos = 3;
-    int ypos = 18;
+    int last_tick_ms = 0;
 
     while (!app.should_quit) {
         app_update(&app);
 
+        if (app.keys_pressed[KEY_LEFT]) {
+            piece_x -= 1;
+        }
+        if (app.keys_pressed[KEY_RIGHT]) {
+            piece_x += 1;
+        }
+
+        int elapsed_ms = app_get_ms();
+        if (elapsed_ms > last_tick_ms + 500) {
+            last_tick_ms = elapsed_ms;
+            update();
+        }
+
         // ------------------------------------------------------------
 
         if (app.mouse_left_pressed) {
-            piece = (piece + 1) % 7;
+            piece_idx = randint(0, 6);
         }
         if (app.mouse_right_pressed) {
-            rotation = (rotation + 1) % 4;
+            piece_rotation = (piece_rotation + 1) % 4;
         }
 
         for (int y = 0; y < 40; y++) {
@@ -94,9 +116,9 @@ int main(int argc, char **argv) {
         }
 
         for (int i = 0; i < 16; i++) {
-            uint8_t p = pieces[piece][rotation][i];
+            uint8_t p = pieces[piece_idx][piece_rotation][i];
             if (p == 1) {
-                grid[ypos + i / 4][xpos + i % 4] = p;
+                grid[piece_y + i / 4][piece_x + i % 4] = p;
             }
         }
         // ------------------------------------------------------------
@@ -111,7 +133,6 @@ int main(int argc, char **argv) {
                 app_draw_rect(r, c);
             }
         }
-
 
         /* for (int p = 0; p < 7; p++) { */
         /*     for (int r = 0; r < 4; r++) { */

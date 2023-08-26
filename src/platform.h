@@ -8,6 +8,7 @@
 #include "SDL_opengl.h"
 
 #include "handmade_math.h"
+#include "keys.h"
 
 typedef struct Rect {
     float x, y, width, height;
@@ -46,6 +47,8 @@ typedef struct App {
 
     bool should_quit;
 
+    bool keys_down[KEY_COUNT];
+    bool keys_pressed[KEY_COUNT];
 } App;
 
 bool app_init(const char *title, int window_width, int window_height);
@@ -73,5 +76,7 @@ void app_draw_model(float *vertices, unsigned int *indices, int vertex_count, in
 
 uint64_t app_get_performance_counter();
 uint64_t app_get_performance_frequency();
+
+int app_get_ms();
 
 #endif // _PLATFORM_H

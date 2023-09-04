@@ -12,8 +12,10 @@
 #define GRID_HEIGHT 20
 #define FULL_GRID_HEIGHT 40
 
-#define PIECE_COUNT 7
+#define DEFAULT_TICK_MS 200
+#define FAST_TICK_MS 16
 
+#define PIECE_COUNT 7
 uint8_t pieces[PIECE_COUNT][4][16] = {
     {
         {0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0},
@@ -110,7 +112,7 @@ bool hits_floor(int new_x, int new_y, int new_rotation) {
     return false;
 }
 
-void update() {
+bool update() {
     if (hits_floor(piece_x, piece_y + 1, piece_rotation)) {
         for (int i = 0; i < 16; i++) {
             uint8_t p = pieces[piece_idx][piece_rotation][i];
@@ -121,8 +123,10 @@ void update() {
         piece_x = INIT_X;
         piece_y = INIT_Y;
         piece_idx = randint(0, PIECE_COUNT - 1);
+        return true;
     } else {
         piece_y += 1;
+        return false;
     }
 }
 
@@ -143,6 +147,7 @@ int main(int argc, char **argv) {
     Color black = {0, 0, 0, 255};
 
     int last_tick_ms = 0;
+    bool soft_drop_reset = false;
 
     while (!app.should_quit) {
         app_update(&app);
@@ -158,10 +163,24 @@ int main(int argc, char **argv) {
             piece_x += 1;
         }
 
+        if (app.keys_pressed[KEY_SPACE]) {
+            bool hits_floor = false;
+            while (!hits_floor) {
+                hits_floor = update();
+            }
+        }
+
         int elapsed_ms = app_get_ms();
-        if (elapsed_ms > last_tick_ms + 200) {
+        if (elapsed_ms > last_tick_ms + DEFAULT_TICK_MS ||
+                (app.keys_down[KEY_DOWN] && elapsed_ms > last_tick_ms + FAST_TICK_MS && !soft_drop_reset)) {
             last_tick_ms = elapsed_ms;
-            update();
+            if (update()) {
+                soft_drop_reset = true;
+            }
+        }
+
+        if (!app.keys_down[KEY_DOWN]) {
+            soft_drop_reset = false;
         }
 
         // ------------------------------------------------------------

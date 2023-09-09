@@ -5,12 +5,12 @@
 
 #include "platform.h"
 
-#define INIT_X 3
-#define INIT_Y 18
 #define INIT_ROTATION 0
 #define GRID_WIDTH 10
 #define GRID_HEIGHT 20
 #define FULL_GRID_HEIGHT 40
+#define INIT_X 3
+#define INIT_Y (FULL_GRID_HEIGHT - GRID_HEIGHT - 2)
 
 #define DEFAULT_TICK_MS 200
 #define FAST_TICK_MS 16
@@ -57,6 +57,7 @@ uint8_t pieces[PIECE_COUNT][4][16] = {
 
 uint8_t floating_grid[FULL_GRID_HEIGHT][GRID_WIDTH] = {0};
 uint8_t grid[FULL_GRID_HEIGHT][GRID_WIDTH] = {0};
+uint8_t cleared_lines[FULL_GRID_HEIGHT] = {0};
 int piece_x = INIT_X;
 int piece_y = INIT_Y;
 int piece_rotation = INIT_ROTATION;
@@ -112,8 +113,34 @@ bool hits_floor(int new_x, int new_y, int new_rotation) {
     return false;
 }
 
+bool line_is_cleared(int y) {
+    for (int x = 0; x < GRID_WIDTH; x++) {
+        if (grid[y][x] == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool update_cleared_lines() {
+    bool retval = false;
+    for (int y = FULL_GRID_HEIGHT - 1; y >= 0; y--) {
+        if (cleared_lines[y]) {
+            for (int yy = y - 1; yy > 0; yy--) {
+                for (int x = 0; x < GRID_WIDTH; x++) {
+                    grid[yy + 1][x] = grid[yy][x];
+                }
+            }
+            cleared_lines[y] = 0;
+            retval = true;
+        }
+    }
+    return retval;
+}
+
 bool update() {
     if (hits_floor(piece_x, piece_y + 1, piece_rotation)) {
+        // Set up new piece
         for (int i = 0; i < 16; i++) {
             uint8_t p = pieces[piece_idx][piece_rotation][i];
             if (p == 1) {
@@ -123,6 +150,14 @@ bool update() {
         piece_x = INIT_X;
         piece_y = INIT_Y;
         piece_idx = randint(0, PIECE_COUNT - 1);
+
+        // Check for cleared lines
+        for (int y = 0; y < FULL_GRID_HEIGHT; y++) {
+            if (line_is_cleared(y)) {
+                cleared_lines[y] = 1;
+            }
+        }
+
         return true;
     } else {
         piece_y += 1;
@@ -174,6 +209,14 @@ int main(int argc, char **argv) {
         if (elapsed_ms > last_tick_ms + DEFAULT_TICK_MS ||
                 (app.keys_down[KEY_DOWN] && elapsed_ms > last_tick_ms + FAST_TICK_MS && !soft_drop_reset)) {
             last_tick_ms = elapsed_ms;
+
+            for (int y = 0; y < FULL_GRID_HEIGHT; y++) {
+                if (cleared_lines[y]) {
+                    update_cleared_lines();
+                    break;
+                }
+            }
+
             if (update()) {
                 soft_drop_reset = true;
             }
@@ -189,13 +232,13 @@ int main(int argc, char **argv) {
         /*     piece_idx = randint(0, PIECE_COUNT - 1); */
         /* } */
         if ((app.mouse_right_pressed || app.keys_pressed[KEY_UP])
-                && !hits_wall(piece_x + 1, piece_y, piece_rotation + 1 % 4)
-                && !hits_floor(piece_x + 1, piece_y, piece_rotation + 1 % 4)) {
+                && !hits_wall(piece_x, piece_y, (piece_rotation + 1) % 4)
+                && !hits_floor(piece_x, piece_y, (piece_rotation + 1) % 4)) {
             piece_rotation = (piece_rotation + 1) % 4;
         }
 
-        for (int y = 0; y < 40; y++) {
-            for (int x = 0; x < 10; x++) {
+        for (int y = 0; y < FULL_GRID_HEIGHT; y++) {
+            for (int x = 0; x < GRID_WIDTH; x++) {
                 floating_grid[y][x] = 0;
             }
         }
@@ -211,14 +254,19 @@ int main(int argc, char **argv) {
 
         app_clear(color_bg);
 
-        for (int y = 18; y < 40; y++) {
-            for (int x = 0; x < 10; x++) {
+        for (int y = INIT_Y; y < FULL_GRID_HEIGHT; y++) {
+            for (int x = 0; x < GRID_WIDTH; x++) {
                 Color c = grid[y][x] == 0 ? color_grid : color_placed;
-                Rect r = {x * 20.0f, (y - 18.0f) * 20.0f, 18.0f, 18.0f};
+
+                if (cleared_lines[y]) {
+                    c = (Color){255, 255, 0, 255};
+                }
+
+                Rect r = {x * 20.0f, (y - (float)INIT_Y) * 20.0f, 18.0f, 18.0f};
                 app_draw_rect(r, c);
 
                 if (floating_grid[y][x] != 0) {
-                    r = (Rect){x * 20.0f, (y - 18.0f) * 20.0f, 18.0f, 18.0f};
+                    r = (Rect){x * 20.0f, (y - (float)INIT_Y) * 20.0f, 18.0f, 18.0f};
                     app_draw_rect(r, color_floating);
                 }
             }

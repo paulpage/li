@@ -13,8 +13,8 @@ platform.o: ${LIB_SRC} ${LIB_FAKESRC}
 main: platform.o ${APP_SRC}
 	${CC} platform.o ${APP_SRC} -g -o main -Ilib -lm `pkg-config sdl2 --cflags --libs`
 
-tetris: platform.o tetris.c
-	${CC} platform.o tetris.c -g -o tetris -Ilib -lm `pkg-config sdl2 --cflags --libs`
+tetris: platform.o src/tetris.c
+	${CC} platform.o src/tetris.c -g -o tetris -Ilib -lm `pkg-config sdl2 --cflags --libs`
 
 
 stitch: src/stitch.c
@@ -29,4 +29,4 @@ mesh_loader: src/mesh_loader.c
 clean:
 	rm -f main stitch parse mesh_loader platform.o
 
-.PHONY: all
+.PHONY: tetris
